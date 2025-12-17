@@ -152,6 +152,7 @@ class MacauGame:
         cards_for_players: List[List[Card]] = [[] for _ in range(self.players_num)]
 
         for _ in range(cards_to_deal):
+            ...
 
 
 
