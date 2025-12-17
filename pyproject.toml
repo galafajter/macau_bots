@@ -1,0 +1,16 @@
+[project]
+name = "makao"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Robert Dubiela",email = "s196506@student.pg.edu.pl"}
+]
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

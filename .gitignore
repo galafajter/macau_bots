@@ -1,0 +1,13 @@
+# Pliki konfiguracyjne PyCharma
+.idea/
+
+# Pliki skompilowane Pythona
+__pycache__/
+*.py[cod]
+
+# Środowiska wirtualne
+venv/
+.venv/
+env/
+
+poetry.toml
