@@ -5,6 +5,7 @@ from enum import Enum
 from itertools import product, cycle
 from typing import List, Optional
 
+random.seed(123)
 
 class Suit(Enum):
     HEART = "Heart"
