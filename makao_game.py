@@ -125,34 +125,51 @@ def check_effect(card_value: Value):
 
 class Deck:
     def __init__(self):
-        self.cards: List[Card] = []
+        self.drawing_cards: List[Card] = []
+        self.stack_of_placed_cards: List[Card] = []
         self.__init_deck()
         self.shuffle()
 
     def __str__(self):
-        return f'{self.cards}'
+        return f'{self.drawing_cards}'
 
     def __repr__(self):
-        return f'{self.cards}'
+        return f'{self.drawing_cards}'
 
     def __len__(self):
-        return len(self.cards)
+        return len(self.drawing_cards)
 
     def __init_deck(self):
-
         for card in product(Suit, Value):
             effect = check_effect(card[0])
-            self.cards.append(Card(*card, effect))
+            self.drawing_cards.append(Card(*card, effect))
 
     def reinit_deck(self, cards: List[Card]):
-        self.cards.extend(cards)
+        self.drawing_cards.extend(cards)
         self.shuffle()
 
     def shuffle(self):
-        random.shuffle(self.cards)
+        random.shuffle(self.drawing_cards)
 
-    def deal(self):
-        return self.cards.pop()
+    def draw_from_deck(self):
+        """
+        Method from drawing a card from deck. It also checks if there are drawing_cards to draw from. If there is not it
+        shuffles the discarded drawing_cards and adds them back to the deck.
+        """
+
+        if len(self.drawing_cards) == 0:
+            if len(self.stack_of_placed_cards) == 0:
+                # IF there is no drawing_cards to draw from AND also no drawing_cards on stack_of_placed_cards to take skip turn
+                # TODO is this condition even possible? Probably it is; How often would that occur?
+                return False
+            else:
+                # IF there is no drawing_cards than take all cards from placed cards except top card, shuffle them and add to drawing_cards
+                cards_to_reshuffle = self.stack_of_placed_cards[:-1]
+                self.stack_of_placed_cards = self.stack_of_placed_cards[-1:]
+                self.reinit_deck(cards_to_reshuffle)
+                return self.drawing_cards.pop()
+        else:
+            return self.drawing_cards.pop()
 
 class Player:
     def __init__(self, hand: List[Card]):
@@ -202,6 +219,8 @@ class Player:
             self.hand.remove(card)
             return card
 
+# TODO refactor idea: make Turn class that will be created in every turn saving data from it
+# TODO refactor idea: the Turn class can also check if action drawing_cards were played
 
 class MacauGame:
 
@@ -210,16 +229,15 @@ class MacauGame:
         self.players_num: int = players_num
         assert players_num >= 2, "Not enough players"
         self.deck: Deck = Deck()
-        self.stack: List[Card] = []
 
         cards_to_deal, first_card = self.__deal_cards()
 
-        self.stack.append(first_card)
+        self.deck.stack_of_placed_cards.append(first_card)
 
-        # deal cards to the moment when passive card is on the table
+        # deal drawing_cards to the moment when passive card is on the table
         while check_effect(first_card.value).has_effect():
-            first_card = self.deck.deal()
-            self.stack.append(first_card)
+            first_card = self.deck.draw_from_deck()
+
 
         self.players: List[Player] = [Player(player_cards) for player_cards in cards_to_deal]
         players_names = [str(i) for i in range(self.players_num)]
@@ -231,36 +249,22 @@ class MacauGame:
         cards_to_deal = self.NUMBER_OF_CARDS_PER_PLAYER * self.players_num
 
         # TODO adjusting number of decks based on `players_number`
-        if cards_to_deal > len(self.deck.cards):
+        if cards_to_deal > len(self.deck.drawing_cards):
             raise ValueError("Too much players for one deck")
 
         cards_for_players: List[List[Card]] = [[] for _ in range(self.players_num)]
 
         for i in range(cards_to_deal):
-            cards_for_players[i % self.players_num].append(self.deck.deal())
+            cards_for_players[i % self.players_num].append(self.deck.draw_from_deck())
 
-        first_card: Card = self.deck.deal()
+        first_card: Card = self.deck.draw_from_deck()
 
         return cards_for_players, first_card
 
-    def check_if_reshuffle_is_needed(self, number_of_cards_needed):
-        # IF there is no cards to draw from THAN get all cards from stack except top card
-        # IF there is no cards to draw from AND also no cards on stack to take skip turn
-        # TODO is above condition even possible? Probably it is; How often would that occur?
-        if len(self.deck) == number_of_cards_needed:
-            if self.stack == 0:
-                return None
-            else:
-                cards_to_reshuffle = self.stack[:-1]
-                self.stack = self.stack[-1:]
-                self.deck.reinit_deck(cards_to_reshuffle)
-                return True
-        else:
-            return False
 
     @property
     def top_card(self):
-        return self.stack[-1]
+        return self.deck.stack_of_placed_cards[-1]
 
 
     def play(self):
@@ -293,26 +297,18 @@ class MacauGame:
             #     else:
             #         demand_suit_counter += 1
             ######
-            # condition for situation when there are no cards to draw from
-            if self.check_if_reshuffle_is_needed(0) is None:
-                continue
 
-            # if len(self.deck) == 0:
-            #     if self.stack == 0:
-            #         continue
-            #     else:
-            #         cards_to_reshuffle = self.stack[:-1]
-            #         self.stack = self.stack[-1:]
-            #         self.deck.reinit_deck(cards_to_reshuffle)
+
+
 
 
             player_move = player.make_move(self.top_card)
             # TODO add rule of 'lucky card' - first drawn card can be thrown if it fits
 
             if player_move is None:
-                player.draw_card(self.deck.deal())
+                player.draw_card(self.deck.draw_from_deck())
             else:
-                self.stack.append(player_move)
+                self.deck.stack_of_placed_cards.append(player_move)
                 # effect = check_effect(player_move.value)
             ###### REFACTOR
             # if effect is not None:
