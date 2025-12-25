@@ -15,8 +15,8 @@ class Suit(Enum):
 
 
 class Value(Enum):
-    TWO = "2"
-    THREE = "3"
+    TWO = 2
+    THREE = 3
     FOUR = "4"
     FIVE = "5"
     SIX = "6"
@@ -33,24 +33,30 @@ class Value(Enum):
 # TODO think about Enum Effect instead of class
 class Effect:
     def __init__(self):
-        ...
+        self.playable_cards: List[Card]
 
     @staticmethod
     @abstractmethod
     def has_effect():
         return NotImplemented
 
+
+# TODO separate effect for kings
 class WarEffect(Effect):
-    CARDS_VALUES = {
-            Value.TWO: 2,
-            Value.THREE: 3,
-            Value.KING: 5,
-        }
 
     def __init__(self):
+        self.playable_cards: List[Card] = [Card(s, v, effect=WarEffect) for s in Suit for v in [Value.TWO, Value.THREE]]
         super().__init__()
-        
-        
+
+    @staticmethod
+    def has_effect():
+        return True
+
+class KingWarEffect(Effect):
+    def __init__(self):
+        # TODO fill other effects
+        self.playable_cards: List[Card] = [Card(s, v, effect=KingWarEffect) for s in [Suit.HEART, Suit.SPADES] for v in [Value.KING]]
+        super().__init__()
 
     @staticmethod
     def has_effect():
@@ -58,15 +64,21 @@ class WarEffect(Effect):
 
 class BlockEffect(Effect):
     def __init__(self):
+        self.playable_cards: List[Card] = [Card(s, v, effect=BlockEffect) for s in Suit for v in [Value.FOUR]]
         super().__init__()
 
     @staticmethod
     def has_effect():
         return True
 
+# TODO how to do demand?
 class DemandValueEffect(Effect):
     def __init__(self):
+        self.playable_cards: List[Card] = []
         super().__init__()
+
+    def make_demand(self, demanded_value: Value):
+        self.playable_cards = [Card(s, v, effect=Effect) for s in Suit for v in [demanded_value]]
 
     @staticmethod
     def has_effect():
@@ -74,7 +86,11 @@ class DemandValueEffect(Effect):
 
 class DemandSuitEffect(Effect):
     def __init__(self):
+        self.playable_cards: List[Card] = []
         super().__init__()
+
+    def make_demand(self, demanded_suit: Suit):
+        self.playable_cards = [Card(s, v, effect=Effect) for s in [demanded_suit] for v in Value]
 
     @staticmethod
     def has_effect():
@@ -82,6 +98,7 @@ class DemandSuitEffect(Effect):
 
 class SkipEffect(Effect):
     def __init__(self):
+        self.playable_cards = [Card(s, v, effect=Effect) for s in Suit for v in Value]
         super().__init__()
 
     @staticmethod
@@ -90,6 +107,7 @@ class SkipEffect(Effect):
 
 class NoneEffect(Effect):
     def __init__(self):
+        self.playable_cards = [Card(s, v, effect=NoneEffect) for s in Suit for v in []]
         super().__init__()
 
     @staticmethod
@@ -110,8 +128,10 @@ class Card:
 
 
 def check_effect(card_value: Value):
-    if card_value in [Value.TWO, Value.THREE, Value.KING]:
+    if card_value in [Value.TWO, Value.THREE]:
         return WarEffect()
+    elif card_value == Value.KING:
+        return KingWarEffect()
     elif card_value == Value.FOUR:
         return BlockEffect()
     elif card_value == Value.JACK:
@@ -144,12 +164,19 @@ class Deck:
             effect = check_effect(card[0])
             self.drawing_cards.append(Card(*card, effect))
 
+    @property
+    def top_stack_card(self):
+        return self.stack_of_placed_cards[-1]
+
     def reinit_deck(self, cards: List[Card]):
         self.drawing_cards.extend(cards)
         self.shuffle()
 
     def shuffle(self):
         random.shuffle(self.drawing_cards)
+
+    def put_on_stack(self, card: Card):
+        self.stack_of_placed_cards.append(card)
 
     def draw_from_deck(self):
         """
@@ -172,9 +199,10 @@ class Deck:
             return self.drawing_cards.pop()
 
 class Player:
-    def __init__(self, hand: List[Card]):
-        self.hand: List[Card] = hand
-        self.name = None # TODO do this in a proper way
+    def __init__(self, name):
+        self.name = name
+        self.hand: List[Card] = []
+        self.playable_hand: List[Card] = []
 
     def __str__(self):
         return f"Player: {self.name}"
@@ -185,7 +213,51 @@ class Player:
     def draw_card(self, card: Card):
         self.hand.append(card)
 
-    def make_move(self, top_card):
+    def evaluate_hand_for_playable_cards(self, playable_cards: List[Card]):
+        for card in self.hand:
+            if card in playable_cards:
+                self.playable_hand.append(card)
+
+    def evaluate_hand(self, top_card: Card, potential_demand: Value | Suit =None):
+        """Choose cards that player can throw on top_stack_card"""
+
+        self.playable_hand.clear()
+        top_card_effect = check_effect(top_card.value)
+
+        if top_card_effect == DemandSuitEffect():
+            top_card.effect.make_demand(potential_demand)
+            self.evaluate_hand_for_playable_cards(top_card_effect.playable_cards)
+        elif top_card_effect == DemandValueEffect:
+            top_card.effect.make_demand(potential_demand)
+            self.evaluate_hand_for_playable_cards(top_card_effect.playable_cards)
+        else:
+            self.evaluate_hand_for_playable_cards(top_card_effect.playable_cards)
+
+
+    def make_random_move(self) -> Card:
+        """
+        Method that implements random strategy of a player.
+        """
+        rnd_card = random.choice(self.playable_hand)
+        self.playable_hand.remove(rnd_card)
+        return rnd_card
+
+    def make_value_demand(self, demanded_value: Value):
+        ...
+
+    def make_suit_demand(self, demanded_suit: Suit):
+        ...
+
+    def make_first_possible_move(self) -> Card:
+        """
+        Method that implements strategy of a player.
+
+        Currently, it is basic strategy - throw first fitting card that you see.
+        """
+
+        return self.playable_hand.pop()
+
+    def make_move(self, top_card: Card) -> Optional[Card]:
         """
         Method that implements strategy of a player.
 
@@ -198,22 +270,6 @@ class Player:
         else:
             return None
 
-    ###### REFACTOR
-    def make_demand_move(self, demand_type, demanded_value_suit):
-        if demand_type == 'suit':
-            for card in self.hand:
-                if card.suit == demanded_value_suit:
-                    return self.play_card(card)
-            else:
-                return None
-        elif demand_type == 'value':
-            for card in self.hand:
-                if card.value == demanded_value_suit:
-                    return self.play_card(card)
-            else:
-                return None
-
-    ######
     def play_card(self, card: Card):
         if card in self.hand:
             self.hand.remove(card)
@@ -221,6 +277,79 @@ class Player:
 
 # TODO refactor idea: make Turn class that will be created in every turn saving data from it
 # TODO refactor idea: the Turn class can also check if action drawing_cards were played
+
+class Turn:
+    NUMBER_OF_CARDS_PER_PLAYER = 5
+
+    def __init__(self, deck, players):
+        self.deck = deck
+
+        self.players: List[Player] = players
+        self.players_num: int = len(players)
+        self.current_player: Optional[Player] = None
+
+        self.cyclic_iter = cycle(players)
+
+        self.__start_game()
+
+
+    def __start_game(self):
+
+        cards_to_deal = self.NUMBER_OF_CARDS_PER_PLAYER * self.players_num
+
+        # TODO adjusting number of decks based on `players_number`
+        if cards_to_deal > len(self.deck.drawing_cards):
+            raise ValueError("Too much players for one deck")
+
+        # dealing the cards in cycle
+        # TODO make use of that cyclic iter in action method - implement changing players
+
+        while cards_to_deal > 0:
+            next_player = next(self.cyclic_iter)
+            next_player.draw_card(self.deck.draw_from_deck())
+            cards_to_deal -= 1
+
+        # put cards on top as long as non-effect card is on top
+        self.deck.put_on_stack(self.deck.draw_from_deck())
+
+        while check_effect(self.deck.top_stack_card.value).has_effect():
+            self.deck.put_on_stack(self.deck.draw_from_deck())
+
+    def next_player_move(self):
+        ...#
+        #
+        #
+        # if self.deck.top_stack_card.effecy == NoneEffect:
+        #     self.pla
+
+    def normal_action(self, active_player: Player, passive_player: Player):
+
+        active_player.evaluate_hand(self.deck.top_stack_card)
+
+        if len(active_player.playable_hand) == 0:
+            active_player.draw_card(self.deck.draw_from_deck())
+            active_player.evaluate_hand(self.deck.top_stack_card)
+
+            # "lucky draw" condition
+            if len(active_player.playable_hand) != 0:
+                new_card = active_player.make_random_move()
+                self.deck.put_on_stack(new_card)
+
+        else:
+            new_card = active_player.make_random_move()
+            self.deck.put_on_stack(new_card)
+
+        if check_effect(self.deck.top_stack_card.value).has_effect():
+            self.effect_action(active_player, passive_player, self.deck.top_stack_card.effect)
+
+    def effect_action(self, active_player, passive_player, effect):
+        # TODO implement effect logic - maybe i can put that if above
+
+        if effect == BlockEffect():
+            ... # block logic - next player can throw only four
+        elif effect == DemandSuitEffect():
+            ... # demand suit logic - next player must throw suit chosen by present player
+        ...
 
 class MacauGame:
 
@@ -232,7 +361,7 @@ class MacauGame:
 
         cards_to_deal, first_card = self.__deal_cards()
 
-        self.deck.stack_of_placed_cards.append(first_card)
+        self.deck.put_on_stack(first_card)
 
         # deal drawing_cards to the moment when passive card is on the table
         while check_effect(first_card.value).has_effect():
@@ -260,11 +389,6 @@ class MacauGame:
         first_card: Card = self.deck.draw_from_deck()
 
         return cards_for_players, first_card
-
-
-    @property
-    def top_card(self):
-        return self.deck.stack_of_placed_cards[-1]
 
 
     def play(self):
@@ -308,13 +432,13 @@ class MacauGame:
             if player_move is None:
                 player.draw_card(self.deck.draw_from_deck())
             else:
-                self.deck.stack_of_placed_cards.append(player_move)
+                self.deck.put_on_stack(player_move)
                 # effect = check_effect(player_move.value)
             ###### REFACTOR
             # if effect is not None:
             #
             #     if effect == WarEffect:
-            #         number_of_cards_to_draw = WarEffect.CARDS_VALUES[self.top_card.value]
+            #         number_of_cards_to_draw = WarEffect.CARDS_VALUES[self.top_stack_card.value]
             #
             #         self.check_if_reshuffle_is_needed(number_of_cards_to_draw)
             #
@@ -351,5 +475,6 @@ class MacauGame:
 
 
 if __name__ == "__main__":
-    game = MacauGame(players_num=3)
-    game.play()
+    # game = MacauGame(players_num=3)
+    # game.play()
+    turn = Turn(Deck(), [Player("b"), Player("a")])
