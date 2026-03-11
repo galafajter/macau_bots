@@ -30,8 +30,8 @@ class Value(Enum):
 
 @dataclass
 class Effect:
-    draw_cards: int = 0
-    block_turns: int = 0
+    draw_cards: bool = False
+    block_turns: bool = False
     demand_value: bool = False
     demand_suit: bool = None
     skip: bool = False
