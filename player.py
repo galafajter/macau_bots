@@ -1,11 +1,10 @@
-from card import Card
+from card import Card, Value, Suit
 from typing import List, Optional
 import random
 
 class Player:
-    def __init__(self, name: str, is_bot: bool):
+    def __init__(self, name: str):
         self.name = name
-        self.is_bot = is_bot
         self.hand: List[Card] = []
         self.playable_hand: List[Card] = []
 
@@ -21,52 +20,34 @@ class Player:
 
     def evaluate_hand_for_playable_cards(self, playable_cards: List[Card]):
         """Choose cards that player can throw on top_stack_card"""
+        self.playable_hand = []
+
         for card in self.hand:
             if card in playable_cards:
                 self.playable_hand.append(card)
 
 
-    def make_value_demand(self):
-        ...
+    def make_value_demand(self) -> Value:
+        return random.choice(list(Value))
 
-    def make_suit_demand(self):
-        ...
+    def make_suit_demand(self) -> Suit:
+        return random.choice(list(Suit))
 
-    def make_random_move(self) -> Optional[Card]:
-        """
-        Method that implements random strategy of a player.
-        """
-        if len(self.playable_hand) == 0:
-            return None
-        rnd_card = random.choice(self.playable_hand)
-        self.playable_hand.remove(rnd_card)
-        return rnd_card
 
-    def make_first_possible_move(self) -> Optional[Card]:
-        """
-        Method that implements strategy of a player.
-
-        Currently, it is basic strategy - throw first fitting card that you see.
-        """
-        if len(self.playable_hand) == 0:
-            return None
-
-        return self.playable_hand.pop()
-
-    def make_move(self, top_card: Card) -> Optional[Card]:
+    def make_move(self) -> Optional[Card]:
         """
         Method that implements strategy of a player.
 
         Currently, it is basic strategy - throw first fitting card that you see.
         """
         # TODO somehow put RL bot here
-        for card in self.playable_hand:
-            if (card.suit.value == top_card.suit.value) or (card.value.value == top_card.value.value):
-                return self.play_card(card)
-        else:
+        if not self.playable_hand:
             return None
+        return self.play_card(self.playable_hand[0])
 
-    def play_card(self, card: Card):
+    def play_card(self, card: Card) -> Optional[Card]:
         if card in self.hand:
             self.hand.remove(card)
             return card
+        else:
+            return None
