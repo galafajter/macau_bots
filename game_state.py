@@ -1,7 +1,7 @@
 from card import Card, Deck, Effect, Suit, Value
 from player import Player
 from typing import List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
