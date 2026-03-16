@@ -36,8 +36,78 @@ class GameMaster:
             Value.ACE: self._playable_suit_demand,
         }
 
-    def process_turn(self, state: GameState, card: Card | None) -> GameState:
-        ...
+    def process_turn(self, state: GameState) -> GameState:
+
+        if state.current_player_index in state.blocked_turns_per_player:
+            state.blocked_turns_per_player[state.current_player_index] -= 1
+            if state.blocked_turns_per_player[state.current_player_index] == 0:
+                del state.blocked_turns_per_player[state.current_player_index]
+            state = self._advance_turn(state)
+            return state
+
+
+
+        playable_cards = self.get_playable_card(state)
+
+        state.current_player.evaluate_hand_for_playable_cards(playable_cards)
+
+        move = state.current_player.make_move(state.deck.top_stack_card)
+
+        state = self._handle_move(state, move)
+
+        if state.execute_effect:
+            state = self._handle_pending_effects(state)
+        state = self._advance_turn(state)
+
+        if state.demand_turns_left > 0:
+            state.demand_turns_left -= 1
+            if state.demand_turns_left == 0:
+                state.demanded_value = None
+                state.demanded_suit = None
+
+        return state
+
+
+    @staticmethod
+    def _handle_pending_effects(state: GameState) -> GameState:
+
+        state.execute_effect = False
+        state.effect_active = False
+
+        if state.block_count:
+            # quick fix for actual blocking logic # TODO make better handling of block rule
+            state.blocked_turns_per_player[state.current_player_index] = state.block_count * (len(state.players) - 1)
+            state.reset_active_effect()
+
+        if state.cards_to_draw: # TODO 'lucky card' rule implementation
+            for _ in range(state.cards_to_draw):
+                state.current_player.draw_card(state.deck.draw_from_deck())
+
+            state.reset_active_effect()
+
+        return state
+
+    def _handle_move(self, state: GameState, move: Card | None) -> GameState:
+
+        if not state.effect_active and move is None:
+            state.current_player.draw_card(state.deck.draw_from_deck())
+            return state
+
+        if state.effect_active and move is None:
+            state.execute_effect = True
+            return state
+
+        state = self.apply_effect(state, move)
+        state.deck.put_on_stack(move)
+        return state
+
+
+    @staticmethod
+    def _advance_turn(state: GameState) -> GameState:
+
+        state.current_player_index = (state.current_player_index + state.turn_direction) % len(state.players)
+        return state
+
 
     def get_playable_card(self, state: GameState) -> List[Card]:
 
@@ -59,6 +129,7 @@ class GameMaster:
         handler = self._effect_handlers.get(card.value)
 
         if handler:
+            state.effect_active = True
             return handler(state, card)
         return state
 
@@ -70,17 +141,21 @@ class GameMaster:
 
     @staticmethod
     def _handle_block(state: GameState, card: Card) -> GameState:
-        state.turns_being_blocked += 1
+        state.block_count += 1
         return state
 
     @staticmethod
     def _handle_value_demand(state: GameState, card: Card) -> GameState:
-        state.demanded_value = card.value
+        demanded_value = state.current_player.make_value_demand()
+        state.demanded_value = demanded_value
+        state.demand_turns_left = len(state.players)
         return state
 
     @staticmethod
     def _handle_suit_demand(state: GameState, card: Card) -> GameState:
-        state.demanded_suit = card.suit
+        demanded_suit = state.current_player.make_suit_demand()
+        state.demanded_suit = demanded_suit
+        state.demand_turns_left = len(state.players)
         return state
 
     @staticmethod
@@ -93,6 +168,8 @@ class GameMaster:
 
         if card.suit == Suit.HEART:
             state.cards_to_draw += 5
+            if state.turn_direction < 0:
+                state.turn_direction *= -1
 
         elif card.suit == Suit.SPADES:
             state.cards_to_draw += 5
@@ -117,7 +194,6 @@ class GameMaster:
 
     def _playable_suit_demand(self, state: GameState) -> List[Card]:
         return [card for card in self.all_cards if card.suit == state.demanded_suit]
-
 
     def _playable_normal(self, state: GameState):
         return [card for card in self.all_cards if (card.value == state.deck.top_stack_card.value) \
