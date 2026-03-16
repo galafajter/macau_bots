@@ -30,11 +30,11 @@ class Value(Enum):
 
 @dataclass
 class Effect:
-    draw_cards: bool = False
-    block_turns: bool = False
+    war: bool = False
+    block: bool = False
     demand_value: bool = False
     demand_suit: bool = None
-    skip: bool = False
+
 
 class Card:
     def __init__(self, suit, value, effect):
