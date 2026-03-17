@@ -2,6 +2,7 @@ from card import Card, Value, Suit
 from typing import List, Optional
 import random
 
+
 class Player:
     def __init__(self, name: str):
         self.name = name
@@ -13,7 +14,6 @@ class Player:
 
     def __repr__(self):
         return f"Player: {self.name}"
-
 
     def draw_card(self, card: Card):
         self.hand.append(card)
