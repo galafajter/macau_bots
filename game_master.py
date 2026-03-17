@@ -45,13 +45,11 @@ class GameMaster:
             state = self._advance_turn(state)
             return state
 
-
-
         playable_cards = self.get_playable_card(state)
 
         state.current_player.evaluate_hand_for_playable_cards(playable_cards)
 
-        move = state.current_player.make_move(state.deck.top_stack_card)
+        move = state.current_player.make_move()
 
         state = self._handle_move(state, move)
 
@@ -66,7 +64,6 @@ class GameMaster:
                 state.demanded_suit = None
 
         return state
-
 
     @staticmethod
     def _handle_pending_effects(state: GameState) -> GameState:
@@ -101,13 +98,11 @@ class GameMaster:
         state.deck.put_on_stack(move)
         return state
 
-
     @staticmethod
     def _advance_turn(state: GameState) -> GameState:
 
         state.current_player_index = (state.current_player_index + state.turn_direction) % len(state.players)
         return state
-
 
     def get_playable_card(self, state: GameState) -> List[Card]:
 
@@ -132,7 +127,6 @@ class GameMaster:
             state.effect_active = True
             return handler(state, card)
         return state
-
 
     @staticmethod
     def _handle_war(state: GameState, card: Card) -> GameState:
