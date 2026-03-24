@@ -5,8 +5,6 @@ from player import Player
 from card import Suit, Value, Card, Deck
 
 
-
-
 @pytest.fixture
 def basic_state():
     player1 = Player("test1")
@@ -138,7 +136,29 @@ def test_war_effect_spades_starts(basic_state):
 
 
 def test_block_effect(basic_state):
-    ...
+    card1 = Card(Suit.HEART, Value.FOUR, effect=None)
+    card2 = Card(Suit.SPADES, Value.FOUR, effect=None)
+    card3 = Card(Suit.CLUBS, Value.FOUR, effect=None)
+    card4 = Card(Suit.DIAMOND, Value.FOUR, effect=None)
+
+    card5 = Card(Suit.HEART, Value.EIGHT, effect=None)
+    card6 = Card(Suit.SPADES, Value.EIGHT, effect=None)
+    card7 = Card(Suit.CLUBS, Value.EIGHT, effect=None)
+    card8 = Card(Suit.DIAMOND, Value.EIGHT, effect=None)
+
+    basic_state.players[0].draw_card(card1)
+    basic_state.players[0].draw_card(card2)
+    basic_state.players[0].draw_card(card5)
+
+    basic_state.players[1].draw_card(card3)
+    basic_state.players[1].draw_card(card4)
+
+
+    basic_state.players[2].draw_card(card6)
+    basic_state.players[2].draw_card(card7)
+    basic_state.players[2].draw_card(card8)
+
+
 
 
 def test_value_demand(basic_state):
