@@ -5,8 +5,6 @@ from player import Player
 from card import Suit, Value, Card, Deck
 
 
-
-
 @pytest.fixture
 def basic_state():
     player1 = Player("test1")
@@ -99,20 +97,24 @@ def test_war_effect_spades_starts(basic_state):
     card1 = Card(Suit.HEART, Value.KING, effect=None)
     card2 = Card(Suit.SPADES, Value.KING, effect=None)
     card3 = Card(Suit.SPADES, Value.EIGHT, effect=None)
-    card4 = Card(Suit.SPADES, Value.NINE, effect=None)
-
+    # TODO in this case one player should have more cards
     basic_state.players[0].draw_card(card3)
-    basic_state.players[0].draw_card(card1)
     basic_state.players[1].draw_card(card2)
-    basic_state.players[2].draw_card(card4)
+    basic_state.players[2].draw_card(card1)
 
     gm = GameMaster()
 
+    print("1", basic_state.deck.top_stack_card)
+
     gm.process_turn(basic_state)
+
+    print("2", basic_state.deck.top_stack_card)
 
     assert not basic_state.effect_active
 
     gm.process_turn(basic_state)
+
+    print("3", basic_state.deck.top_stack_card)
 
     assert basic_state.effect_active
     assert basic_state.cards_to_draw == 5
@@ -120,17 +122,56 @@ def test_war_effect_spades_starts(basic_state):
 
     gm.process_turn(basic_state)
 
+    print("4", basic_state.deck.top_stack_card)
+
     assert basic_state.effect_active
     assert basic_state.cards_to_draw == 10
     assert basic_state.turn_direction == 1
 
     gm.process_turn(basic_state)
 
+    print("5", basic_state.deck.top_stack_card)
+
     assert len(basic_state.players[1].hand) == 10
 
 
 def test_block_effect(basic_state):
-    ...
+    card1 = Card(Suit.HEART, Value.FOUR, effect=None)
+    card2 = Card(Suit.SPADES, Value.FOUR, effect=None)
+    card3 = Card(Suit.CLUBS, Value.FOUR, effect=None)
+    card4 = Card(Suit.DIAMOND, Value.FOUR, effect=None)
+
+    card5 = Card(Suit.HEART, Value.EIGHT, effect=None)
+    card6 = Card(Suit.SPADES, Value.EIGHT, effect=None)
+    card7 = Card(Suit.CLUBS, Value.EIGHT, effect=None)
+    card8 = Card(Suit.DIAMOND, Value.EIGHT, effect=None)
+
+    basic_state.players[0].draw_card(card1)
+    basic_state.players[0].draw_card(card2)
+    basic_state.players[0].draw_card(card5)
+
+    basic_state.players[1].draw_card(card3)
+    basic_state.players[1].draw_card(card4)
+
+    basic_state.players[2].draw_card(card6)
+    basic_state.players[2].draw_card(card7)
+    basic_state.players[2].draw_card(card8)
+
+    gm = GameMaster()
+
+    # first block
+    gm.process_turn(basic_state)
+
+    # second block
+    gm.process_turn(basic_state)
+
+    # third block - player blocked
+    gm.process_turn(basic_state)
+
+    assert basic_state.blocked_turns_per_player[2] == 4
+
+    # TODO add more actions in that block test
+
 
 
 def test_value_demand(basic_state):
@@ -145,7 +186,5 @@ def test_advance_turn(basic_state):
     gm = GameMaster()
     next_state = gm._advance_turn(basic_state)
 
-    next_index = next_state.current_player_index
-
-    assert curr_index + 1 == next_index
+    assert curr_index + 1 == next_state.current_player_index
 
