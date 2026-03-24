@@ -99,24 +99,20 @@ def test_war_effect_spades_starts(basic_state):
     card1 = Card(Suit.HEART, Value.KING, effect=None)
     card2 = Card(Suit.SPADES, Value.KING, effect=None)
     card3 = Card(Suit.SPADES, Value.EIGHT, effect=None)
-    # TODO in this case one player should have more cards
+    card4 = Card(Suit.SPADES, Value.NINE, effect=None)
+
     basic_state.players[0].draw_card(card3)
+    basic_state.players[0].draw_card(card1)
     basic_state.players[1].draw_card(card2)
-    basic_state.players[2].draw_card(card1)
+    basic_state.players[2].draw_card(card4)
 
     gm = GameMaster()
 
-    print("1", basic_state.deck.top_stack_card)
-
     gm.process_turn(basic_state)
-
-    print("2", basic_state.deck.top_stack_card)
 
     assert not basic_state.effect_active
 
     gm.process_turn(basic_state)
-
-    print("3", basic_state.deck.top_stack_card)
 
     assert basic_state.effect_active
     assert basic_state.cards_to_draw == 5
@@ -124,15 +120,11 @@ def test_war_effect_spades_starts(basic_state):
 
     gm.process_turn(basic_state)
 
-    print("4", basic_state.deck.top_stack_card)
-
     assert basic_state.effect_active
     assert basic_state.cards_to_draw == 10
     assert basic_state.turn_direction == 1
 
     gm.process_turn(basic_state)
-
-    print("5", basic_state.deck.top_stack_card)
 
     assert len(basic_state.players[1].hand) == 10
 
@@ -155,5 +147,5 @@ def test_advance_turn(basic_state):
 
     next_index = next_state.current_player_index
 
-    assert curr_index + 1 == next_state.current_player_index
+    assert curr_index + 1 == next_index
 
