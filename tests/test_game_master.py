@@ -153,11 +153,24 @@ def test_block_effect(basic_state):
     basic_state.players[1].draw_card(card3)
     basic_state.players[1].draw_card(card4)
 
-
     basic_state.players[2].draw_card(card6)
     basic_state.players[2].draw_card(card7)
     basic_state.players[2].draw_card(card8)
 
+    gm = GameMaster()
+
+    # first block
+    gm.process_turn(basic_state)
+
+    # second block
+    gm.process_turn(basic_state)
+
+    # third block - player blocked
+    gm.process_turn(basic_state)
+
+    assert basic_state.blocked_turns_per_player[2] == 4
+
+    # TODO add more actions in that block test
 
 
 

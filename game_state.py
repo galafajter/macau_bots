@@ -11,8 +11,8 @@ class GameState:
     players: List[Player]
     current_player_index: int
 
-    demanded_suit: Suit | None = None
-    demanded_value: Value | None = None
+    demanded_suit: Suit = None
+    demanded_value: Value = None
     demand_turns_left: int = 0
 
     cards_to_draw: int = 0

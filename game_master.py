@@ -84,7 +84,7 @@ class GameMaster:
 
         return state
 
-    def _handle_move(self, state: GameState, move: Card | None) -> GameState:
+    def _handle_move(self, state: GameState, move: Card) -> GameState:
 
         if not state.effect_active and move is None:
             state.current_player.draw_card(state.deck.draw_from_deck())
