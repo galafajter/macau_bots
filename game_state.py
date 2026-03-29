@@ -32,6 +32,9 @@ class GameState:
         self.block_count = 0
         self.demanded_suit = None
         self.demanded_value = None
+        self.effect_active = False
+        self.execute_effect = False
+
 
     @property
     def current_player(self) -> Player:
