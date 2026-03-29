@@ -45,6 +45,10 @@ class GameMaster:
             state = self._advance_turn(state)
             return state
 
+        if state.execute_effect:
+            state = self._handle_pending_effects(state)
+
+
         playable_cards = self.get_playable_card(state)
 
         state.current_player.evaluate_hand_for_playable_cards(playable_cards)
@@ -53,8 +57,6 @@ class GameMaster:
 
         state = self._handle_move(state, move)
 
-        if state.execute_effect:
-            state = self._handle_pending_effects(state)
         state = self._advance_turn(state)
 
         if state.demand_turns_left > 0:
@@ -78,7 +80,8 @@ class GameMaster:
 
         if state.cards_to_draw: # TODO 'lucky card' rule implementation
             for _ in range(state.cards_to_draw):
-                state.current_player.draw_card(state.deck.draw_from_deck())
+                if state.deck.draw_from_deck():
+                    state.current_player.draw_card(state.deck.draw_from_deck())
 
             state.reset_active_effect()
 
@@ -87,8 +90,11 @@ class GameMaster:
     def _handle_move(self, state: GameState, move: Card | None) -> GameState:
 
         if not state.effect_active and move is None:
-            state.current_player.draw_card(state.deck.draw_from_deck())
-            return state
+            if state.deck.draw_from_deck():
+                state.current_player.draw_card(state.deck.draw_from_deck())
+                return state
+            else:
+                return state
 
         if state.effect_active and move is None:
             state.execute_effect = True
@@ -113,10 +119,10 @@ class GameMaster:
         elif state.demanded_value:
             return self._playable_cards_handlers[Value.JACK](state)
 
-        handler = self._playable_cards_handlers.get(top_card.value)
-
-        if handler:
-            return handler(state)
+        if state.effect_active:
+            handler = self._playable_cards_handlers.get(top_card.value)
+            if handler:
+                return handler(state)
 
         return self._playable_normal(state)
 
@@ -178,7 +184,9 @@ class GameMaster:
         return [card for card in self.functional_cards if card.value == Value.FOUR or card.value == Value.QUEEN]
 
     def _playable_value_demand(self, state: GameState) -> List[Card]:
-        return [card for card in self.nonfunctional_cards if card.value == state.demanded_value] # TODO think about queen role in ending demand effect
+        demand_cards = [card for card in self.nonfunctional_cards if card.value == state.demanded_value]
+        queen_cards = [card for card in self.functional_cards if card.value == Value.QUEEN]
+        return demand_cards + queen_cards
 
     def _playable_queen(self, state: GameState) -> List[Card]:
         return self.all_cards
