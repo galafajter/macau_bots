@@ -73,8 +73,7 @@ class Deck:
 
     def __init_deck(self):
         for card in product(Suit, Value):
-            effect = check_effect(card[0])
-            self.drawing_cards.append(Card(*card, effect))
+            self.drawing_cards.append(Card(*card, effect=None))
 
     @property
     def top_stack_card(self):
@@ -97,7 +96,7 @@ class Deck:
         """
 
         if len(self.drawing_cards) == 0:
-            if len(self.stack_of_placed_cards) == 0:
+            if len(self.stack_of_placed_cards) <= 1:
                 # IF there is no drawing_cards to draw from AND also no drawing_cards on stack_of_placed_cards to take skip turn
                 # TODO is this condition even possible? Probably it is; How often would that occur?
                 return False
@@ -110,6 +109,3 @@ class Deck:
         else:
             return self.drawing_cards.pop()
 
-
-def check_effect(*args) -> Effect:
-    ...
