@@ -2,14 +2,15 @@ import time
 
 from itertools import cycle
 from typing import Optional
-
+import random
 from game_state import GameState
 from game_master import GameMaster
+from game_logger import GameLogger
 from card import Card, Deck, Value, Suit
 from player import Player
 from typing import List
 
-
+random.seed(20)
 
 class MacauGame:
 
@@ -17,6 +18,7 @@ class MacauGame:
     def __init__(self, players_num: int):
         if players_num < 2:
             raise ValueError("Not enough players")
+        self.game_logger = GameLogger()
         self.game_master: GameMaster = GameMaster()
         self.game_state: GameState = self.__create_initial_game_state(players_num)
 
@@ -65,45 +67,48 @@ class MacauGame:
         return cards_for_players, first_card
 
 
-    def play(self):
-
-        while True:
-            print(f"Player {self.game_state.current_player_index} on move")
-            print(f"Player 0 hand: {self.game_state.players[0].hand}")
-            print(f"Player 1 hand: {self.game_state.players[1].hand}")
-            print(f"Player 2 hand: {self.game_state.players[2].hand}")
-            print(f"Top card: {self.game_state.deck.top_stack_card}")
-            # print(f"Possible card to play: {self.game_state.}")
-            print(f"Is some effect active: {self.game_state.effect_active}")
-            print(f"Suit demand: {self.game_state.demanded_suit}")
-            print(f"Value demand: {self.game_state.demanded_value}")
-            print("------------------------------------------------")
-            print()
-            self.game_master.process_turn(self.game_state)
-
-            if len(self.game_state.current_player.hand) == 0:
-                return f"Player {self.game_state.current_player.name} won!"
-    #
-    #         # time.sleep(0.5)
-
     # def play(self):
     #     turn = 0
     #     while True:
-    #         current = self.game_state.current_player
-    #         top = self.game_state.deck.top_stack_card
-    #
+
+    #         print(turn)
+    #         print(f"Player {self.game_state.current_player_index} on move")
+    #         print(f"Player 0 hand: {self.game_state.players[0].hand}")
+    #         print(f"Player 1 hand: {self.game_state.players[1].hand}")
+    #         print(f"Player 2 hand: {self.game_state.players[2].hand}")
+    #         print(f"Top card: {self.game_state.deck.top_stack_card}")
+    #         # print(f"Possible card to play: {self.game_state.}")
+    #         print(f"Is some effect active: {self.game_state.effect_active}")
+    #         print(f"Suit demand: {self.game_state.demanded_suit}")
+    #         print(f"Value demand: {self.game_state.demanded_value}")
+    #         print("------------------------------------------------")
+    #         print()
     #         self.game_master.process_turn(self.game_state)
-    #         print(f"Tura {turn} | Gracz {current.name} | Top: {top} | Ręka: {current.hand}")
     #         turn += 1
-    #
-    #         for player in self.game_state.players:
-    #             if len(player.hand) == 0:
-    #                 print(f"Player {player.name} won after {turn} turns!")
-    #                 return player.name
-    #
-    #         if turn > 1000:  # zabezpieczenie przed nieskończoną pętlą
-    #             print("Game too long - possible infinite loop")
-    #             return "error"
+    #         if len(self.game_state.current_player.hand) == 0:
+    #             return f"Player {self.game_state.current_player.name} won!"
+    # #
+    #         # time.sleep(0.5)
+
+    def play(self):
+        turn = 0
+        while True:
+            current = self.game_state.current_player
+            top = self.game_state.deck.top_stack_card
+            # TODO logger
+            self.game_master.process_turn(self.game_state)
+            # TODO logger ater
+            print(f"Tura {turn} | Gracz {current.name} | Top: {top} | Ręka: {current.hand}")
+            turn += 1 # TODO make turn change after whole all players make a move
+    
+            for player in self.game_state.players:
+                if len(player.hand) == 0:
+                    print(f"Player {player.name} won after {turn} turns!")
+                    return player.name
+    
+            if turn > 1000:  # zabezpieczenie przed nieskończoną pętlą
+                print("Game too long - possible infinite loop")
+                return "error"
 
 if __name__ == "__main__":
     game = MacauGame(players_num=3)
