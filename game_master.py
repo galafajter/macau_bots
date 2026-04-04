@@ -45,9 +45,6 @@ class GameMaster:
             state = self._advance_turn(state)
             return state
 
-        if state.execute_effect:
-            state = self._handle_pending_effects(state)
-
 
         playable_cards = self.get_playable_card(state)
 
@@ -56,6 +53,11 @@ class GameMaster:
         move = state.current_player.make_move()
 
         state = self._handle_move(state, move)
+
+        if state.execute_effect:
+            state = self._handle_pending_effects(state)
+            state = self._advance_turn(state)
+            return state
 
         state = self._advance_turn(state)
 
@@ -80,8 +82,9 @@ class GameMaster:
 
         if state.cards_to_draw: # TODO 'lucky card' rule implementation
             for _ in range(state.cards_to_draw):
-                if state.deck.draw_from_deck():
-                    state.current_player.draw_card(state.deck.draw_from_deck())
+                drawed_card = state.deck.draw_from_deck()
+                if drawed_card:
+                    state.current_player.draw_card(drawed_card)
 
             state.reset_active_effect()
 
@@ -90,8 +93,9 @@ class GameMaster:
     def _handle_move(self, state: GameState, move: Card | None) -> GameState:
 
         if not state.effect_active and move is None:
-            if state.deck.draw_from_deck():
-                state.current_player.draw_card(state.deck.draw_from_deck())
+            drawed_card = state.deck.draw_from_deck()
+            if drawed_card:
+                state.current_player.draw_card(drawed_card)
                 return state
             else:
                 return state
