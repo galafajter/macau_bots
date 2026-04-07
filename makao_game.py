@@ -7,30 +7,27 @@ from game_state import GameState
 from game_master import GameMaster
 from game_logger import GameLogger
 from card import Card, Deck, Value, Suit
-from player import Player
+from player import Player, AggressivePlayer, CautiousPlayer, RandomPlayer
 from typing import List
 
-random.seed(20)
+from tqdm import tqdm
+
+# random.seed(20)
 
 class MacauGame:
 
     NUMBER_OF_CARDS_PER_PLAYER = 5
-    def __init__(self, players_num: int):
-        if players_num < 2:
+    def __init__(self, players: List[Player]):
+        if len(players) < 2:
             raise ValueError("Not enough players")
-        self.game_logger = GameLogger()
         self.game_master: GameMaster = GameMaster()
-        self.game_state: GameState = self.__create_initial_game_state(players_num)
+        self.game_state: GameState = self.__create_initial_game_state(players)
 
-
-    def __create_initial_game_state(self, players_num: int) -> GameState:
-
-        # create players
-        players: List[Player] = [Player(str(i)) for i in range(players_num)]
+    def __create_initial_game_state(self, players: List[Player]) -> GameState:
 
         # create deck
         deck = Deck()
-        cards_to_deal, first_card = self.__deal_cards(deck, players_num)
+        cards_to_deal, first_card = self.__deal_cards(deck, len(players))
 
         # deal cards for players
         for i, player_cards in enumerate(cards_to_deal):
@@ -66,50 +63,39 @@ class MacauGame:
 
         return cards_for_players, first_card
 
-
-    # def play(self):
-    #     turn = 0
-    #     while True:
-
-    #         print(turn)
-    #         print(f"Player {self.game_state.current_player_index} on move")
-    #         print(f"Player 0 hand: {self.game_state.players[0].hand}")
-    #         print(f"Player 1 hand: {self.game_state.players[1].hand}")
-    #         print(f"Player 2 hand: {self.game_state.players[2].hand}")
-    #         print(f"Top card: {self.game_state.deck.top_stack_card}")
-    #         # print(f"Possible card to play: {self.game_state.}")
-    #         print(f"Is some effect active: {self.game_state.effect_active}")
-    #         print(f"Suit demand: {self.game_state.demanded_suit}")
-    #         print(f"Value demand: {self.game_state.demanded_value}")
-    #         print("------------------------------------------------")
-    #         print()
-    #         self.game_master.process_turn(self.game_state)
-    #         turn += 1
-    #         if len(self.game_state.current_player.hand) == 0:
-    #             return f"Player {self.game_state.current_player.name} won!"
-    # #
-    #         # time.sleep(0.5)
-
-    def play(self):
-        turn = 0
+    def play(self, game_id, game_logger, log_filename):
+        move_num = 1
         while True:
-            current = self.game_state.current_player
-            top = self.game_state.deck.top_stack_card
-            # TODO logger
+            # current = self.game_state.current_player
+            # top = self.game_state.deck.top_stack_card
+
+            player_idx = self.game_state.current_player_index
+            game_logger.log_turn_before_move(self.game_state, player_idx, move_num, game_id)
+
             self.game_master.process_turn(self.game_state)
-            # TODO logger ater
-            print(f"Tura {turn} | Gracz {current.name} | Top: {top} | Ręka: {current.hand}")
-            turn += 1 # TODO make turn change after whole all players make a move
+
+            game_logger.log_turn_after_move(self.game_state, player_idx, "NOT IMPLEMENTED")
+
+            # print(f"Numer ruchu {move_num} | Gracz {current.name} | Top: {top} | Ręka: {current.hand}")
+
+            move_num += 1
     
             for player in self.game_state.players:
                 if len(player.hand) == 0:
-                    print(f"Player {player.name} won after {turn} turns!")
+                    game_logger.log_winner(self.game_state.current_player.name, move_num, game_id)
+                    game_logger.save_logs_to_csv(log_filename)
+                    # print(f"Player {player.name} won after {move_num} total moves!")
                     return player.name
     
-            if turn > 1000:  # zabezpieczenie przed nieskończoną pętlą
-                print("Game too long - possible infinite loop")
+            if move_num > 1000:  # zabezpieczenie przed nieskończoną pętlą
+                # print("Game too long - possible infinite loop")
                 return "error"
 
 if __name__ == "__main__":
-    game = MacauGame(players_num=3)
-    game.play()
+    import uuid
+    rand_uuid = uuid.uuid4().hex[:8]
+    filename = f"./results/{rand_uuid}_macau_simulation.csv"
+    logger = GameLogger()
+    for idx in tqdm(range(1000)):
+        game = MacauGame(players=[CautiousPlayer("Cautious"), AggressivePlayer("Aggressive"), RandomPlayer("Random")])
+        game.play(idx, logger, filename)
