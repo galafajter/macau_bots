@@ -1,0 +1,19 @@
+- winrate
+- winrate między różnymi strategiami
+- stabilność strategii
+- expected value ruchu (?)
+- czy strategia wydłuża gry czy skraca (?)
+- ranking kart (?)
+- średnia liczba ruchów z odchyleniem standardowym
+- rozkład długości gier (?)
+- w jakim stopniu szybkie pozbywanie się kart przewiduje wygraną (?)
+- klasteryzacja stanów gry (k-means?) + feature importance (co najbardziej wpływa na wynik)
+- czy pierwszy gracz wygrywa częściej
+- jaka karta najczęściej kończy grę
+- jaka karta jest najczęściej rzucana
+- heatmapa kart (?)
+- własna metryka (expected cards reduction?)
+- profilowanie strategii (?)
+- zmiana liczby kart w czasie (?)
+- przełomowe momenty (?)
+- zmiany lidera (?)
