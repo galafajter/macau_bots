@@ -1,6 +1,7 @@
 from game_state import GameState
 from card import Card
 import pandas as pd
+import json
 
 
 class GameLogger:
@@ -15,17 +16,19 @@ class GameLogger:
             'game_id': game_id,
             'move_num': move_num,
             'player': player_index,
-            'cards_in_hand_before': list(state.players[player_index].hand),
-            'top_card_before': state.deck.top_stack_card,
-            'effect_active': state.effect_active
+            'hand_size_before': len(state.players[player_index].hand),
+            'top_card_before': str(state.deck.top_stack_card),
+            'effect_active': state.effect_active,
+            # 'remaining_demand_turns_before': state.demand_turns_left
         })
-    # TOOD add more log data
+
     def log_turn_after_move(self, state: GameState, player_index: int, action_made: str):
         self.logs[-1].update({
-            'cards_in_hand_after': list(state.players[player_index].hand),
-            'top_card_after': state.deck.top_stack_card,
+            'cards_in_hand_after': len(state.players[player_index].hand),
+            'top_card_after': str(state.deck.top_stack_card),
             'action_made': action_made,
-            'deck_remaining': len(state.deck.drawing_cards)
+            'deck_remaining': len(state.deck.drawing_cards),
+            # 'remaining_demand_turns_after': state.demand_turns_left,
         })
 
 
@@ -36,9 +39,7 @@ class GameLogger:
             'total_moves': moves
         })
 
-    def save_logs_to_csv(self, filename: str):
-        pd.DataFrame(self.logs).to_csv(filename, index=False)
-        pd.DataFrame(self.game_results).to_csv(
-            filename.replace('.csv', '_results.csv') ,
-            index=False
-        )
+    def save_logs_to_json(self, filename: str):
+        with open(filename, "a") as f:
+            for log in self.logs:
+                f.write(json.dumps(log) + "\n")
