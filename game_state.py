@@ -27,16 +27,33 @@ class GameState:
 
     skip_turn: bool = False
 
+    action: str = ""
+
     def reset_active_effect(self):
         self.cards_to_draw = 0
         self.block_count = 0
         self.demanded_suit = None
         self.demanded_value = None
+        self.demand_turns_left = 0
         self.effect_active = False
         self.execute_effect = False
+
+
+    def reset_suit_demand(self):
+        self.demanded_suit = None
+        self.demand_turns_left = 0
 
 
     @property
     def current_player(self) -> Player:
         return self.players[self.current_player_index]
+
+    def eval_action(self):
+
+        if self.deck.top_stack_card in []:
+            self.action = 'draw_card'
+        elif self.deck.top_stack_card in []:
+            ...
+        elif self.deck.top_stack_card:
+            ...
 
