@@ -72,18 +72,17 @@ class MacauGame:
             player_idx = self.game_state.current_player_index
             game_logger.log_turn_before_move(self.game_state, player_idx, move_num, game_id)
 
-            self.game_master.process_turn(self.game_state)
+            action = self.game_master.process_turn(self.game_state)
 
-            game_logger.log_turn_after_move(self.game_state, player_idx, "NOT IMPLEMENTED")
-
-            # print(f"Numer ruchu {move_num} | Gracz {current.name} | Top: {top} | Ręka: {current.hand}")
+            game_logger.log_turn_after_move(self.game_state, player_idx, action)
 
             move_num += 1
     
             for player in self.game_state.players:
                 if len(player.hand) == 0:
                     game_logger.log_winner(self.game_state.current_player.name, move_num, game_id)
-                    game_logger.save_logs_to_csv(log_filename)
+                    game_logger.save_logs_to_json(log_filename)
+                    game_logger.logs.clear()
                     # print(f"Player {player.name} won after {move_num} total moves!")
                     return player.name
     
@@ -91,10 +90,18 @@ class MacauGame:
                 # print("Game too long - possible infinite loop")
                 return "error"
 
+def simulate_single_game(args):
+    game_id, players, filename = args
+    game = MacauGame(players)
+    logger = GameLogger()
+    result = game.play(game_id, logger, filename)
+    return result
+
+
 if __name__ == "__main__":
     import uuid
     rand_uuid = uuid.uuid4().hex[:8]
-    filename = f"./results/{rand_uuid}_macau_simulation.csv"
+    filename = f"./results/{rand_uuid}_macau_simulation.json"
     logger = GameLogger()
     for idx in tqdm(range(1000)):
         game = MacauGame(players=[CautiousPlayer("Cautious"), AggressivePlayer("Aggressive"), RandomPlayer("Random")])
