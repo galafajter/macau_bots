@@ -11,9 +11,13 @@ class GameMaster:
                                                                                              Value.FOUR, Value.JACK,
                                                                                              Value.QUEEN, Value.KING,
                                                                                              Value.ACE)]
+        self.functional_cards.remove(Card(suit=Suit.CLUBS, value=Value.KING, effect=None))
+        self.functional_cards.remove(Card(suit=Suit.DIAMOND, value=Value.KING, effect=None))
         self.nonfunctional_cards: List[Card] = [Card(s, v, effect=None) for s in Suit for v in (Value.FIVE, Value.SIX,
                                                                                                 Value.SEVEN, Value.EIGHT,
                                                                                                 Value.NINE, Value.TEN)]
+        self.nonfunctional_cards.append(Card(suit=Suit.CLUBS, value=Value.KING, effect=None))
+        self.nonfunctional_cards.append(Card(suit=Suit.DIAMOND, value=Value.KING, effect=None))
         self.all_cards = self.functional_cards + self.nonfunctional_cards
 
         self._effect_handlers: dict[Value, Callable[[GameState, Card], GameState]] = {
@@ -36,14 +40,64 @@ class GameMaster:
             Value.ACE: self._playable_suit_demand,
         }
 
-    def process_turn(self, state: GameState) -> GameState:
+    def eval_action(self, move: Card | None, state: GameState) -> dict:
+        if move is None and state.execute_effect:
+            if state.block_count:
+                return {"action": "execute_block"}
+            elif state.cards_to_draw:
+                return {"action": "execute_war"}
+            elif state.demanded_suit is not None:
+                return {"action": "draw_card_because_dont_have_suit"}
+            elif state.demanded_value is not None:
+                return {"action": "draw_card_because_dont_have_value"}
+            else:
+                return {"action": "unknown_none_action"}
+
+        elif move is None and not state.execute_effect:
+            return {"action": "draw_card"}
+
+
+        if move in self.functional_cards:
+            if move.value == Value.ACE:
+                return {"action": "suit_demand", "card": str(move)}
+
+            elif move.value in [Value.TWO, Value.THREE]:
+                return {"action": "war", "card": str(move)}
+
+            elif move in [Card(suit=Suit.SPADES, value=Value.KING, effect=None), Card(suit=Suit.HEART, value=Value.KING, effect=None)]:
+                return {"action": "war", "card": str(move)}
+            elif move.value == Value.QUEEN:
+                return {"action": "skip", "card": str(move)}
+
+            elif move.value == Value.JACK:
+                return {"action": "value_demand", "card": str(move)}
+            elif move.value == Value.FOUR:
+                return {"action": "block", "card": str(move)}
+            else:
+                return {"action": "unknown_functional_action", "card": str(move)}
+
+
+        elif move in self.nonfunctional_cards:
+            if not state.effect_active:
+                return {"action": "play_card", "card": str(move)}
+            elif state.effect_active and state.demanded_value is not None:
+                return {"action": "play_demanded_value", "card": str(move)}
+
+            elif state.effect_active and state.demanded_suit is not None:
+                return {"action": "play_demanded_suit", "card": str(move)}
+            else:
+                return {"action": "unknown_nonfunctional_action", "card": str(move)}
+
+
+
+    def process_turn(self, state: GameState) -> dict:
 
         if state.current_player_index in state.blocked_turns_per_player:
             state.blocked_turns_per_player[state.current_player_index] -= 1
             if state.blocked_turns_per_player[state.current_player_index] == 0:
                 del state.blocked_turns_per_player[state.current_player_index]
-            state = self._advance_turn(state)
-            return state
+            self._advance_turn(state)
+            return {"action": "skipped_turn_because_of_block"}
 
 
         playable_cards = self.get_playable_card(state)
@@ -54,20 +108,23 @@ class GameMaster:
 
         state = self._handle_move(state, move)
 
+        action = self.eval_action(move, state)
+
         if state.execute_effect:
             state = self._handle_pending_effects(state)
-            state = self._advance_turn(state)
-            return state
+            self._advance_turn(state)
+            return action
 
         state = self._advance_turn(state)
 
         if state.demand_turns_left > 0:
             state.demand_turns_left -= 1
             if state.demand_turns_left == 0:
+                state.effect_active = False
                 state.demanded_value = None
                 state.demanded_suit = None
 
-        return state
+        return action
 
     @staticmethod
     def _handle_pending_effects(state: GameState) -> GameState:
@@ -82,9 +139,9 @@ class GameMaster:
 
         if state.cards_to_draw: # TODO 'lucky card' rule implementation
             for _ in range(state.cards_to_draw):
-                drawed_card = state.deck.draw_from_deck()
-                if drawed_card:
-                    state.current_player.draw_card(drawed_card)
+                drawn_card = state.deck.draw_from_deck()
+                if drawn_card:
+                    state.current_player.draw_card(drawn_card)
 
             state.reset_active_effect()
 
@@ -93,9 +150,9 @@ class GameMaster:
     def _handle_move(self, state: GameState, move: Card | None) -> GameState:
 
         if not state.effect_active and move is None:
-            drawed_card = state.deck.draw_from_deck()
-            if drawed_card:
-                state.current_player.draw_card(drawed_card)
+            drawn_card = state.deck.draw_from_deck()
+            if drawn_card:
+                state.current_player.draw_card(drawn_card)
                 return state
             else:
                 return state
@@ -141,6 +198,7 @@ class GameMaster:
     @staticmethod
     def _handle_war(state: GameState, card: Card) -> GameState:
         state.cards_to_draw += int(card.value.value)
+        state.reset_suit_demand()
         return state
 
     @staticmethod
@@ -152,14 +210,14 @@ class GameMaster:
     def _handle_value_demand(state: GameState, card: Card) -> GameState:
         demanded_value = state.current_player.make_value_demand()
         state.demanded_value = demanded_value
-        state.demand_turns_left = len(state.players)
+        state.demand_turns_left = len(state.players) + 1
         return state
 
     @staticmethod
     def _handle_suit_demand(state: GameState, card: Card) -> GameState:
         demanded_suit = state.current_player.make_suit_demand()
         state.demanded_suit = demanded_suit
-        state.demand_turns_left = len(state.players)
+        state.demand_turns_left = len(state.players) + 1
         return state
 
     @staticmethod
@@ -174,10 +232,15 @@ class GameMaster:
             state.cards_to_draw += 5
             if state.turn_direction < 0:
                 state.turn_direction *= -1
+            state.reset_suit_demand()
 
         elif card.suit == Suit.SPADES:
             state.cards_to_draw += 5
             state.turn_direction *= -1
+            state.reset_suit_demand()
+
+        else:
+            state.effect_active = False
 
         return state
 
