@@ -76,8 +76,13 @@ class AggressivePlayer(Player):
 
     def __init__(self, name):
         super().__init__(name)
-        # TODO should I consider queen in this list? # TODO refactor using a dict?
-        self.first_cards_to_throw: List[Value] = [Value.ACE, Value.TWO, Value.THREE, Value.FOUR, Value.JACK, Value.QUEEN, Value.KING]
+        # TODO refactor using a dict?
+        self.aggressive_cards: List[Card] = [Card(s, v, effect=None) for s in Suit for v in (Value.TWO, Value.THREE,
+                                                                                             Value.FOUR, Value.JACK,
+                                                                                             Value.QUEEN, Value.KING,
+                                                                                             Value.ACE)]
+        self.aggressive_cards.remove(Card(suit=Suit.CLUBS, value=Value.KING, effect=None))
+        self.aggressive_cards.remove(Card(suit=Suit.DIAMOND, value=Value.KING, effect=None))
 
 
     def make_move(self) -> Optional[Card]:
@@ -87,10 +92,9 @@ class AggressivePlayer(Player):
         if not self.playable_hand:
             return None
 
-        for val in self.first_cards_to_throw:
-            matching_cards = list(filter(lambda cls: cls.value == val, self.playable_hand))
-            if matching_cards:
-                return self.play_card(matching_cards[0])
+        matching_aggressive_cards = [c for c in self.playable_hand if c in self.aggressive_cards]
+        if matching_aggressive_cards:
+            return self.play_card(random.choice(matching_aggressive_cards))
 
         return self.play_card(random.choice(self.playable_hand))
 
@@ -103,7 +107,12 @@ class CautiousPlayer(Player):
 
     def __init__(self, name):
         super().__init__(name)
-        self.first_cards_to_throw: List[Value] = [Value.FIVE, Value.SIX, Value.SEVEN, Value.EIGHT, Value.NINE, Value.TEN]
+        self.cautious_cards: List[Card] = [Card(s, v, effect=None) for s in Suit for v in (Value.FIVE, Value.SIX,
+                                                                                           Value.SEVEN,
+                                                                                           Value.EIGHT,
+                                                                                           Value.NINE, Value.TEN)]
+        self.cautious_cards.append(Card(suit=Suit.CLUBS, value=Value.KING, effect=None))
+        self.cautious_cards.append(Card(suit=Suit.DIAMOND, value=Value.KING, effect=None))
 
     def make_move(self) -> Optional[Card]:
         """
@@ -116,9 +125,115 @@ class CautiousPlayer(Player):
             matching_cards = list(filter(lambda cls: cls.value == val, self.playable_hand))
             if matching_cards:
                 return self.play_card(matching_cards[0])
+        matching_cautious_cards = [c for c in self.playable_hand if c in self.cautious_cards]
+        if matching_cautious_cards:
+            return self.play_card(random.choice(matching_cautious_cards))
 
         return self.play_card(random.choice(self.playable_hand))
 
+class ThresholdPlayer(Player):
+    def __init__(self, name, threshold=3):
+        super().__init__(name)
+        self.threshold = threshold
+        self.aggressive = AggressivePlayer(name + "_aggressive")
+        self.cautious = CautiousPlayer(name + "_cautious")
+
+    def make_move(self):
+        if not self.playable_hand:
+            return None
+
+        self.aggressive.playable_hand = self.playable_hand
+        self.cautious.playable_hand = self.playable_hand
+
+        if len(self.hand) <= self.threshold:
+            return self.aggressive.make_move()
+        else:
+            return self.cautious.make_move()
+
+class DualThresholdPlayer(Player):
+    def __init__(self, name, threshold_lb=3, threshold_ub=10):
+        super().__init__(name)
+        self.threshold_lb = threshold_lb
+        self.threshold_ub = threshold_ub
+        if self.threshold_lb > self.threshold_ub:
+            raise ValueError("Upper bound threshold must be larger than lower bound threshold")
+        self.aggressive = AggressivePlayer(name + "_aggressive")
+        self.cautious = CautiousPlayer(name + "_cautious")
+
+    def make_move(self):
+        if not self.playable_hand:
+            return None
+
+        self.aggressive.playable_hand = self.playable_hand
+        self.cautious.playable_hand = self.playable_hand
+
+        if len(self.hand) <= self.threshold_lb or len(self.hand) >= self.threshold_ub:
+            return self.aggressive.make_move()
+        else:
+            return self.cautious.make_move()
+
+class BalancingPlayer(Player):
+    def __init__(self, name):
+        super().__init__(name)
+
+        from collections import Counter
+        self.suit_frequency = Counter()
+
+    def make_move(self) -> Optional[Card]:
+        self.suit_frequency.clear()
+        self.suit_frequency.update(c.suit for c in self.playable_hand)
+
+        most_common = self.suit_frequency.most_common()
+
+        for common_suit, _ in most_common:
+            matching_suits = [c for c in self.playable_hand if c.suit == common_suit]
+            if matching_suits:
+                return self.play_card(random.choice(matching_suits))
+
+
+class ChangeSuitPlayer(Player):
+    def __init__(self, name):
+        super().__init__(name)
+        self.card_values = list(Value)
+        # TODO should queen be in that list?
+    def make_move(self) -> Optional[Card]:
+        if not self.playable_hand:
+            return None
+
+        matched_values = [c for c in self.playable_hand if c.value in self.card_values]
+        if matched_values:
+            return self.play_card(random.choice(matched_values))
+        else:
+            return self.play_card(random.choice(self.playable_hand))
+
+# ---- ADVANCED STRATEGIES ----
+
+class BayesianPlayer(Player):
+
+    def __init__(self, name):
+        super().__init__(name)
+
+    def make_move(self) -> Optional[Card]:
+        pass
+
+class GeneticPlayer(Player):
+
+    def __init__(self, name):
+        super().__init__(name)
+
+    def make_move(self) -> Optional[Card]:
+        pass
+
+class MCTSPlayer(Player):
+    """
+    Class that implements Monte Carlo Search Trees strategy.
+    """
+    def __init__(self, name):
+        super().__init__(name)
+        pass
+
+    def make_move(self) -> Optional[Card]:
+        pass
 
 class RLPlayer(Player):
 
@@ -135,16 +250,5 @@ class RLPlayer(Player):
             return None
         return self.play_card(self.playable_hand[self._pending_action])
 
-
-class MCTSPlayer(Player):
-    """
-    Class that implements Monte Carlo Search Trees strategy.
-    """
-    def __init__(self, name):
-        super().__init__(name)
-        pass
-
-    def make_move(self) -> Optional[Card]:
-        pass
 
 
