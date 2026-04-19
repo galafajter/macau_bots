@@ -37,7 +37,7 @@ class Effect:
 
 
 class Card:
-    def __init__(self, suit, value, effect):
+    def __init__(self, suit, value, effect=None):
         self.suit: Suit = suit
         self.value: Value = value
         # self.effect: Effect = effect
