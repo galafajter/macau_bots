@@ -113,3 +113,4 @@ if __name__ == "__main__":
     for idx in tqdm(range(1000)):
         game = MacauGame(players=players)
         game.play(idx, logger, filename)
+        players = players[-1:] + players[:-1]
