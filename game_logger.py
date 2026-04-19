@@ -43,3 +43,9 @@ class GameLogger:
         with open(filename, "a") as f:
             for log in self.logs:
                 f.write(json.dumps(log) + "\n")
+        self.logs.clear()
+
+    def save_game_winner(self, filename):
+        with open(f"{filename}", "a") as f:
+            f.write(json.dumps(*self.game_results) + "\n")
+        self.game_results.clear()

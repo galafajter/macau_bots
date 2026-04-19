@@ -9,7 +9,7 @@ from game_logger import GameLogger
 from card import Card, Deck, Value, Suit
 from player import Player, AggressivePlayer, CautiousPlayer, RandomPlayer
 from typing import List
-
+from pathlib import Path
 from tqdm import tqdm
 
 # random.seed(20)
@@ -63,7 +63,7 @@ class MacauGame:
 
         return cards_for_players, first_card
 
-    def play(self, game_id, game_logger, log_filename):
+    def play(self, game_id: int, game_logger: GameLogger, log_filename: Path):
         move_num = 1
         while True:
             # current = self.game_state.current_player
@@ -77,15 +77,21 @@ class MacauGame:
             game_logger.log_turn_after_move(self.game_state, player_idx, action)
 
             move_num += 1
-    
+            # TODO add more places than one
             for player in self.game_state.players:
                 if len(player.hand) == 0:
                     game_logger.log_winner(self.game_state.current_player.name, move_num, game_id)
                     game_logger.save_logs_to_json(log_filename)
-                    game_logger.logs.clear()
-                    # print(f"Player {player.name} won after {move_num} total moves!")
+                    winner_log_file = log_filename.with_name(
+                        log_filename.stem + "_results" + log_filename.suffix
+                    )
+                    game_logger.save_game_winner(winner_log_file)
+
                     return player.name
-    
+
+            if len(game_logger.logs) >= 1000:
+                game_logger.save_logs_to_json(log_filename)
+
             if move_num > 1000:  # zabezpieczenie przed nieskończoną pętlą
                 # print("Game too long - possible infinite loop")
                 return "error"
@@ -101,8 +107,9 @@ def simulate_single_game(args):
 if __name__ == "__main__":
     import uuid
     rand_uuid = uuid.uuid4().hex[:8]
-    filename = f"./results/{rand_uuid}_macau_simulation.json"
+    filename = Path(f"./eda/simulation_results/{rand_uuid}_macau_simulation.json")
     logger = GameLogger()
+    players = [CautiousPlayer("Cautious"), AggressivePlayer("Aggressive"), RandomPlayer("Random")]
     for idx in tqdm(range(1000)):
-        game = MacauGame(players=[CautiousPlayer("Cautious"), AggressivePlayer("Aggressive"), RandomPlayer("Random")])
+        game = MacauGame(players=players)
         game.play(idx, logger, filename)
