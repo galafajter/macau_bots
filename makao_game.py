@@ -6,7 +6,7 @@ import random
 from game_state import GameState
 from game_master import GameMaster
 from game_logger import GameLogger
-from database import MacauDatabase
+from database.database import MacauDatabase
 from card import Card, Deck, Value, Suit
 from player import Player, AggressivePlayer, CautiousPlayer, RandomPlayer
 from typing import List
@@ -21,8 +21,8 @@ class MacauGame:
         if len(players) < 2:
             raise ValueError("Not enough players")
         self.game_master: GameMaster = GameMaster()
-        self.game_state: GameState = self.__create_initial_game_state(players)
         self.number_of_cards_per_player: int = number_of_cards_per_player
+        self.game_state: GameState = self.__create_initial_game_state(players)
 
     def __create_initial_game_state(self, players: List[Player]) -> GameState:
 

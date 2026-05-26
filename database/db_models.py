@@ -7,7 +7,7 @@ import json
 class Game:
     num_players: int
     initial_cards_num: int
-    total_moves: Optional[int] = None
+    total_moves: Optional[int] = 0
     winner: Optional[int] = None  # FK do players.id (może być None na początku gry)
     created_at: datetime = datetime.now()
     id: Optional[int] = None
