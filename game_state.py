@@ -28,7 +28,7 @@ class GameState:
     skip_turn: bool = False
 
     action: str = ""
-    last_affected_cards: list[Card] = []
+    last_affected_cards: list[Card] = field(default_factory=list)
 
     def reset_active_effect(self):
         self.cards_to_draw = 0
