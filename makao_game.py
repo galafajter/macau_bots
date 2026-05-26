@@ -6,6 +6,7 @@ import random
 from game_state import GameState
 from game_master import GameMaster
 from game_logger import GameLogger
+from database import MacauDatabase
 from card import Card, Deck, Value, Suit
 from player import Player, AggressivePlayer, CautiousPlayer, RandomPlayer
 from typing import List
@@ -16,12 +17,12 @@ from tqdm import tqdm
 
 class MacauGame:
 
-    NUMBER_OF_CARDS_PER_PLAYER = 5
-    def __init__(self, players: List[Player]):
+    def __init__(self, players: List[Player], number_of_cards_per_player: int):
         if len(players) < 2:
             raise ValueError("Not enough players")
         self.game_master: GameMaster = GameMaster()
         self.game_state: GameState = self.__create_initial_game_state(players)
+        self.number_of_cards_per_player: int = number_of_cards_per_player
 
     def __create_initial_game_state(self, players: List[Player]) -> GameState:
 
@@ -41,7 +42,7 @@ class MacauGame:
         return state
 
     def __deal_cards(self, deck: Deck, players_num: int) -> tuple[List[List[Card]], Card]:
-        cards_to_deal = self.NUMBER_OF_CARDS_PER_PLAYER * players_num
+        cards_to_deal = self.number_of_cards_per_player * players_num
 
         # TODO adjusting number of decks based on `players_number`
         if cards_to_deal > len(deck.drawing_cards):
@@ -63,54 +64,42 @@ class MacauGame:
 
         return cards_for_players, first_card
 
-    def play(self, game_id: int, game_logger: GameLogger, log_filename: Path):
+    def play(self,game_logger: GameLogger):
         move_num = 1
+
+        game_logger.init_log(self.game_state)
+
         while True:
-            # current = self.game_state.current_player
-            # top = self.game_state.deck.top_stack_card
+        
+            game_logger.in_game_log_before(self.game_state, move_num)
+            hand_before = list(self.game_state.current_player.hand)
 
-            player_idx = self.game_state.current_player_index
-            game_logger.log_turn_before_move(self.game_state, player_idx, move_num, game_id)
+            self.game_master.process_turn(self.game_state)
+            self.game_state.eval_action(hand_before)
 
-            action = self.game_master.process_turn(self.game_state)
-
-            game_logger.log_turn_after_move(self.game_state, player_idx, action)
+            game_logger.in_game_log_after(self.game_state)
 
             move_num += 1
             # TODO add more places than one
-            for player in self.game_state.players:
+            for pos, player in enumerate(self.game_state.players):
                 if len(player.hand) == 0:
-                    game_logger.log_winner(self.game_state.current_player.name, move_num, game_id)
-                    game_logger.save_logs_to_json(log_filename)
-                    winner_log_file = log_filename.with_name(
-                        log_filename.stem + "_results" + log_filename.suffix
-                    )
-                    game_logger.save_game_winner(winner_log_file)
+                    game_logger.endgame_log(winner_pos=pos, total_moves=move_num)
 
                     return player.name
 
-            if len(game_logger.logs) >= 1000:
-                game_logger.save_logs_to_json(log_filename)
-
-            if move_num > 1000:  # zabezpieczenie przed nieskończoną pętlą
+            if move_num > 1000:
                 # print("Game too long - possible infinite loop")
                 return "error"
 
-def simulate_single_game(args):
-    game_id, players, filename = args
-    game = MacauGame(players)
-    logger = GameLogger()
-    result = game.play(game_id, logger, filename)
-    return result
-
 
 if __name__ == "__main__":
-    import uuid
-    rand_uuid = uuid.uuid4().hex[:8]
-    filename = Path(f"./eda/simulation_results/{rand_uuid}_macau_simulation.json")
-    logger = GameLogger()
+    db = MacauDatabase("macau.db")
+    logger = GameLogger(db_instance=db)
+
     players = [CautiousPlayer("Cautious"), AggressivePlayer("Aggressive"), RandomPlayer("Random")]
     for idx in tqdm(range(1000)):
-        game = MacauGame(players=players)
-        game.play(idx, logger, filename)
+        game = MacauGame(players=players, number_of_cards_per_player=5)
+        
+        game.play(logger)
+        
         players = players[-1:] + players[:-1]
