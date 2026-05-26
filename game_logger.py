@@ -1,51 +1,165 @@
 from game_state import GameState
 from card import Card
-import pandas as pd
 import json
+from database import MacauDatabase
+from db_models import Game, Player, Strategy, Move, GameCard
 
 
 class GameLogger:
 
-    def __init__(self):
-        self.logs: list = []
-        self.game_results: list = []
+    def __init__(self, db_instance: MacauDatabase):
+        self.db: MacauDatabase = db_instance
 
-    def log_turn_before_move(self, state: GameState, player_index: int,
-                  move_num: int, game_id: int):
-        self.logs.append({
-            'game_id': game_id,
-            'move_num': move_num,
-            'player': player_index,
-            'hand_size_before': len(state.players[player_index].hand),
-            'top_card_before': str(state.deck.top_stack_card),
-            'effect_active': state.effect_active,
-            # 'remaining_demand_turns_before': state.demand_turns_left
-        })
+        self.game = None
+        self.players = []
+        self.strategies = []
 
-    def log_turn_after_move(self, state: GameState, player_index: int, action_made: str):
-        self.logs[-1].update({
-            'cards_in_hand_after': len(state.players[player_index].hand),
-            'top_card_after': str(state.deck.top_stack_card),
-            'action_made': action_made,
-            'deck_remaining': len(state.deck.drawing_cards),
-            # 'remaining_demand_turns_after': state.demand_turns_left,
-        })
+        self.moves_logs: list[Move] = []
+        self.cards_positions_logs: list[GameCard] = []
+
+        self.card_id_cache = self._load_card_ids()
 
 
-    def log_winner(self, winner_name: str, moves: int, game_id: int):
-        self.game_results.append({
-            'game_id': game_id,
-            'winner': winner_name,
-            'total_moves': moves
-        })
+    def _load_card_ids(self) -> dict:
+        with self.db._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, suit, rank FROM cards")
 
-    def save_logs_to_json(self, filename: str):
-        with open(filename, "a") as f:
-            for log in self.logs:
-                f.write(json.dumps(log) + "\n")
-        self.logs.clear()
+            return {(row[1], row[2]): row[0] for row in cursor.fetchall()}
 
-    def save_game_winner(self, filename):
-        with open(f"{filename}", "a") as f:
-            f.write(json.dumps(*self.game_results) + "\n")
-        self.game_results.clear()
+    def _get_card_id(self, card: Card) -> int:
+        return self.card_id_cache.get((card.suit.name, card.value.name))
+
+    def init_log(self, state: GameState):
+        players = state.players
+        game = Game(
+            num_players=len(players),
+            initial_cards_num=len(players[0].hand),
+        )
+        self.game = self.db.insert_game(game)
+
+        for pos, player in enumerate(players):
+
+            strategy = Strategy(
+                name=player.get_strategy_name(),
+                params=player.get_params()
+            )
+
+            strategy = self.db.insert_strategy(strategy)
+
+            player_db = Player(
+                strategy_id=strategy.id,
+                game_id=self.game.id,
+                position=pos
+            )
+
+            player_db = self.db.insert_player(player_db)
+            self.players.append(player_db)
+
+        for pos, player in enumerate(players):
+            player_id = self.players[pos].id
+            for card in player.hand:
+                self.cards_positions_logs.append(
+                    GameCard(
+                        game_id=self.game.id,
+                        card_id=self._get_card_id(card),
+                        location='hand',
+                        player_id=player_id,
+                        move_num=0
+                    )
+                )
+        
+        for card in state.deck.drawing_cards:
+            self.cards_positions_logs.append(
+                GameCard(
+                    game_id=self.game.id,
+                    card_id=self._get_card_id(card),
+                    location='deck',
+                    player_id=None,
+                    move_num=0
+                )
+            )
+        
+        top_card = state.deck.top_stack_card
+        self.cards_positions_logs.append(
+            GameCard(
+                game_id=self.game.id,
+                card_id=self._get_card_id(card),
+                location='stack',
+                player_id=None,
+                move_num=0
+            )
+        )
+
+    def in_game_log_before(self, state: GameState, move_num: int) -> Move:
+        """Logging data while game runs before player move"""
+        
+        hand_before_str = json.dumps([f"{c.value.name}_{c.suit.name}" for c in state.current_player.hand])
+        top_card_id = self._get_card_id(state.deck.top_stack_card)
+
+        move_before = Move(
+            game_id=self.game.id,
+            player_id=self.players[state.current_player_index].id,
+            move_num=move_num, 
+            hand_before=hand_before_str,
+            top_card_before=top_card_id,
+        )
+        self.moves_logs.append(move_before)
+    
+    def in_game_log_after(self, state: GameState):
+        """Logging data while game runs after player move"""
+        move_before = self.moves_logs[-1]
+
+        hand_after_str = json.dumps([f"{c.value.name}_{c.suit.name}" for c in state.current_player.hand])
+        top_card_id = self._get_card_id(state.deck.top_stack_card)
+        
+        move_after = Move(
+            game_id=move_before.game_id,
+            player_id=move_before.player_id,
+            move_num=move_before.move_num,
+            action=state.action,
+            hand_before=move_before.hand_before,
+            hand_after=hand_after_str,
+            top_card_before=move_before.top_card_before,
+            top_card_after=top_card_id
+        )
+
+        self.moves_logs[-1] = move_after
+
+        if state.action == "play_card":
+            for card in state.last_affected_cards:
+                self.cards_positions_logs.append(
+                    GameCard(
+                        game_id=self.game.id,
+                        card_id=self._get_card_id(card),
+                        location='discard',
+                        player_id=None,
+                        move_num=move_after.move_num
+                    )
+                )
+        
+        elif state.action in ("draw_card", "draw_more_cards"):
+            for card in state.last_affected_cards:
+                self.cards_positions_logs.append(
+                    GameCard(
+                        game_id=self.game.id,
+                        card_id=self._get_card_id(card),
+                        location='hand',
+                        player_id=move_after.player_id,
+                        move_num=move_after.move_num
+                    )
+                )
+        
+    def endgame_log(self, winner_pos: int, total_moves: int):
+        winner_db_id = self.players[winner_pos].id
+
+        self.db.insert_moves(self.moves_logs)
+        self.db.insert_game_cards(self.cards_positions_logs)
+
+        self.db.update_game_winner_and_total_moves(self.game.id, winner_db_id, total_moves)
+
+        self.players.clear()
+        self.strategies.clear()
+        self.moves_logs.clear()
+        self.cards_positions_logs.clear()
+        self.game = None
