@@ -28,7 +28,7 @@ class GameLogger:
             return {(row[1], row[2]): row[0] for row in cursor.fetchall()}
 
     def _get_card_id(self, card: Card) -> int:
-        return self.card_id_cache.get((card.suit.name, card.value.name))
+        return self.card_id_cache.get((card.suit.value, card.value.value))
 
     def init_log(self, state: GameState):
         players = state.players
@@ -84,7 +84,7 @@ class GameLogger:
         self.cards_positions_logs.append(
             GameCard(
                 game_id=self.game.id,
-                card_id=self._get_card_id(card),
+                card_id=self._get_card_id(top_card),
                 location='stack',
                 player_id=None,
                 move_num=0
@@ -100,7 +100,7 @@ class GameLogger:
         move_before = Move(
             game_id=self.game.id,
             player_id=self.players[state.current_player_index].id,
-            move_num=move_num, 
+            move_num=move_num,
             hand_before=hand_before_str,
             top_card_before=top_card_id,
         )
@@ -112,7 +112,7 @@ class GameLogger:
 
         hand_after_str = json.dumps([f"{c.value.name}_{c.suit.name}" for c in state.current_player.hand])
         top_card_id = self._get_card_id(state.deck.top_stack_card)
-        
+
         move_after = Move(
             game_id=move_before.game_id,
             player_id=move_before.player_id,
@@ -132,12 +132,12 @@ class GameLogger:
                     GameCard(
                         game_id=self.game.id,
                         card_id=self._get_card_id(card),
-                        location='discard',
+                        location='stack',
                         player_id=None,
                         move_num=move_after.move_num
                     )
                 )
-        
+
         elif state.action in ("draw_card", "draw_more_cards"):
             for card in state.last_affected_cards:
                 self.cards_positions_logs.append(
