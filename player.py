@@ -10,12 +10,19 @@ class Player(ABC):
         self.name = name
         self.hand: List[Card] = []
         self.playable_hand: List[Card] = []
+        self.params: dict = None
 
     def __str__(self):
         return f"{self.__class__.__name__}: {self.name}"
 
     def __repr__(self):
         return f"{self.__class__.__name__}: {self.name}"
+
+    def get_strategy_name(self):
+        return self.__class__.__name__
+    
+    def get_params(self):
+        return self.params
 
     def draw_card(self, card: Card):
         self.hand.append(card)
