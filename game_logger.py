@@ -1,8 +1,8 @@
 from game_state import GameState
 from card import Card
 import json
-from database import MacauDatabase
-from db_models import Game, Player, Strategy, Move, GameCard
+from database.database import MacauDatabase
+from database.db_models import Game, Player, Strategy, Move, GameCard
 
 
 class GameLogger:
