@@ -2,10 +2,10 @@ from itertools import combinations
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 
-from makao_game import MacauGame
-from game_logger import GameLogger
+from core.makao_game import MacauGame
+from logger.game_logger import GameLogger
 from database.database import MacauDatabase
-from player import (
+from core.player import (
     CautiousPlayer, AggressivePlayer, RandomPlayer,
     ThresholdPlayer, DualThresholdPlayer, BalancingPlayer,
     ChangeSuitPlayer,
@@ -24,7 +24,7 @@ STRATEGY_REGISTRY: dict[str, type] = {
 
 PLAYER_COUNTS          = [3, 4, 5]
 SIMULATIONS_PER_CONFIG = 1000
-DB_PATH                = "../macau-without-replacement.db"
+DB_PATH                = "./data/test.db"
 N_CARDS                = 5
 
 
@@ -63,20 +63,20 @@ if __name__ == "__main__":
     db.seed_cards()
     db.close()
 
-    configs = generate_configs(STRATEGY_REGISTRY, PLAYER_COUNTS)
-    total_games = len(configs) * SIMULATIONS_PER_CONFIG
-    print(f"Konfiguracji:       {len(configs)}")
-    print(f"Łączna liczba gier: {total_games:,}")
+    # configs = generate_configs(STRATEGY_REGISTRY, PLAYER_COUNTS)
+    # total_games = len(configs) * SIMULATIONS_PER_CONFIG
+    # print(f"Confiurations:       {len(configs)}")
+    # print(f"Total number of games: {total_games:,}")
 
-    worker_args = [
-        (cfg, SIMULATIONS_PER_CONFIG, DB_PATH, N_CARDS)
-        for cfg in configs
-    ]
+    # worker_args = [
+    #     (cfg, SIMULATIONS_PER_CONFIG, DB_PATH, N_CARDS)
+    #     for cfg in configs
+    # ]
 
-    with Pool(processes=cpu_count()) as pool:
-        for _ in tqdm(
-            pool.imap_unordered(run_config, worker_args),
-            total=len(worker_args),
-            desc="Configurations",
-        ):
-            pass
+    # with Pool(processes=cpu_count()) as pool:
+    #     for _ in tqdm(
+    #         pool.imap_unordered(run_config, worker_args),
+    #         total=len(worker_args),
+    #         desc="Configurations",
+    #     ):
+    #         pass

@@ -1,4 +1,4 @@
-from makao_game import MacauGame
+from core.makao_game import MacauGame
 import random
 import pytest
 

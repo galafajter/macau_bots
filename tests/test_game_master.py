@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import patch
-from game_master import GameMaster
-from game_state import GameState
-from player import Player
-from card import Suit, Value, Card, Deck
+from core.game_master import GameMaster
+from core.game_state import GameState
+from core.player import Player
+from core.card import Suit, Value, Card, Deck
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 import pytest
-from player import Player
+from core.player import Player
 from card import Card, Suit, Value
 
 def test_draw_card_adds_to_hand():
