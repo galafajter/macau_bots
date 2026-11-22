@@ -30,6 +30,10 @@ class GameState:
     action: str = ""
     last_affected_cards: list[Card] = field(default_factory=list)
 
+    # "szczęśliwa karta": próbny dobór w tej turze (1 karta) i karta zagrana w tej turze
+    lucky_drawn: bool = False
+    played_card: Card | None = None
+
     def reset_active_effect(self):
         self.cards_to_draw = 0
         self.block_count = 0
@@ -68,6 +72,12 @@ class GameState:
                 self.action = "draw_more_cards"
                 drawn_cards = [c for c in hand_after if c not in hand_before]
                 self.last_affected_cards.extend(drawn_cards)
+
+            elif self.played_card is not None:
+                # "szczęśliwa karta": w tej turze nastąpił próbny dobór i zagranie
+                # tej samej karty (długość ręki bez zmian) -- to jest zagranie, nie blokada
+                self.action = "play_card"
+                self.last_affected_cards.append(self.played_card)
 
             else:
                 self.action = "blocked"
