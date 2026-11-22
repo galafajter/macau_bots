@@ -1,0 +1,23 @@
+[tool.ruff]
+# Minimalny, praktyczny zestaw na start (simple obecnie przechodzi bez zmian w kodzie).
+# Ostrzenie (UP/I/B itd.) planowane w osobnych PR-ach wraz z autofixami.
+line-length = 120
+target-version = "py312"
+extend-exclude = ["eda", "data"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# Importy celowo zatrzymane: blok main jest wyłączony do czasu scalenia WIP
+# (wip/threshold-refactor) -- Pool/cpu_count/tqdm wracają do użycia.
+"simulations/simulation_without_replacement.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["core", "logger", "database", "simulations", "tests"]
+
+[tool.mypy]
+# Start: informational (non-blocking w CI). Docelowo doszli jawni typizacja w PR-ach.
+python_version = "3.12"
+ignore_missing_imports = true
+explicit_package_bases = true

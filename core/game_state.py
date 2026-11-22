@@ -1,4 +1,4 @@
-from core.card import Card, Deck, Effect, Suit, Value
+from core.card import Card, Deck, Suit, Value
 from core.player import Player
 from typing import List
 from dataclasses import dataclass, field
