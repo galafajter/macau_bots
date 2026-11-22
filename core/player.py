@@ -1,5 +1,6 @@
 from abc import abstractmethod, ABC
 
+from core import rules
 from core.card import Card, Value, Suit
 from typing import List, Optional
 import random
@@ -83,13 +84,8 @@ class AggressivePlayer(Player):
 
     def __init__(self, name):
         super().__init__(name)
-        # TODO refactor using a dict?
-        self.aggressive_cards: List[Card] = [Card(s, v, effect=None) for s in Suit for v in (Value.TWO, Value.THREE,
-                                                                                             Value.FOUR, Value.JACK,
-                                                                                             Value.QUEEN, Value.KING,
-                                                                                             Value.ACE)]
-        self.aggressive_cards.remove(Card(suit=Suit.CLUBS, value=Value.KING, effect=None))
-        self.aggressive_cards.remove(Card(suit=Suit.DIAMOND, value=Value.KING, effect=None))
+        # karty z efektami (agresywne) -- jedno źródło prawdy: core/rules.py
+        self.aggressive_cards: List[Card] = rules.functional_cards()
 
 
     def make_move(self) -> Optional[Card]:
@@ -114,12 +110,8 @@ class CautiousPlayer(Player):
 
     def __init__(self, name):
         super().__init__(name)
-        self.cautious_cards: List[Card] = [Card(s, v, effect=None) for s in Suit for v in (Value.FIVE, Value.SIX,
-                                                                                           Value.SEVEN,
-                                                                                           Value.EIGHT,
-                                                                                           Value.NINE, Value.TEN)]
-        self.cautious_cards.append(Card(suit=Suit.CLUBS, value=Value.KING, effect=None))
-        self.cautious_cards.append(Card(suit=Suit.DIAMOND, value=Value.KING, effect=None))
+        # karty pasywne -- jedno źródło prawdy: core/rules.py
+        self.cautious_cards: List[Card] = rules.nonfunctional_cards()
 
     def make_move(self) -> Optional[Card]:
         """

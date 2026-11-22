@@ -1,3 +1,4 @@
+from core import rules
 from core.card import Card, Value, Suit
 from core.game_state import GameState
 from typing import List, Callable
@@ -7,18 +8,9 @@ class GameMaster:
 
     def __init__(self):
 
-        self.functional_cards: List[Card] = [Card(s, v, effect=None) for s in Suit for v in (Value.TWO, Value.THREE,
-                                                                                             Value.FOUR, Value.JACK,
-                                                                                             Value.QUEEN, Value.KING,
-                                                                                             Value.ACE)]
-        self.functional_cards.remove(Card(suit=Suit.CLUBS, value=Value.KING, effect=None))
-        self.functional_cards.remove(Card(suit=Suit.DIAMOND, value=Value.KING, effect=None))
-        self.nonfunctional_cards: List[Card] = [Card(s, v, effect=None) for s in Suit for v in (Value.FIVE, Value.SIX,
-                                                                                                Value.SEVEN, Value.EIGHT,
-                                                                                                Value.NINE, Value.TEN)]
-        self.nonfunctional_cards.append(Card(suit=Suit.CLUBS, value=Value.KING, effect=None))
-        self.nonfunctional_cards.append(Card(suit=Suit.DIAMOND, value=Value.KING, effect=None))
-        self.all_cards = self.functional_cards + self.nonfunctional_cards
+        self.functional_cards: List[Card] = rules.functional_cards()
+        self.nonfunctional_cards: List[Card] = rules.nonfunctional_cards()
+        self.all_cards: List[Card] = rules.all_cards()
 
         self._effect_handlers: dict[Value, Callable[[GameState, Card], GameState]] = {
             Value.TWO: self._handle_war,
