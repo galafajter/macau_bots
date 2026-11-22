@@ -1,8 +1,6 @@
 import sqlite3
-import json
-from datetime import datetime
 from core.card import Suit, Value
-from database.db_models import Game, Card, Player, Strategy, Move, GameCard
+from database.db_models import Game, Player, Strategy, Move, GameCard
 import threading
 
 class MacauDatabase:
