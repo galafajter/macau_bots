@@ -148,7 +148,7 @@ class MacauDatabase:
         return game
 
 
-    def update_game_winner_and_total_moves(self, game_id: int, winner_player_id: int, total_moves: int):
+    def update_game_winner_and_total_moves(self, game_id: int, winner_player_id: int | None, total_moves: int):
         conn = self._get_conn()
         conn.execute(
             "UPDATE games SET winner = ?, total_moves = ? WHERE id = ?",
