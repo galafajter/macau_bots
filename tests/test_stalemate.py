@@ -10,7 +10,7 @@ import sqlite3
 
 from core.card import Suit, Value
 from core.game_state import GameState
-from core.makao_game import MacauGame
+from core.macau_game import MacauGame
 from tests.helpers import DummyPlayer, NullLogger, card, make_deck
 
 

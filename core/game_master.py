@@ -33,6 +33,10 @@ class GameMaster:
         }
 
     def eval_action(self, move: Card | None, state: GameState) -> dict:
+        """Klasyfikuje akcję tury silnika (słownik akcji; nie jest zapisywany do bazy).
+
+        Uwaga: GameState.annotate_action to INNA metoda (etykiety do SQLite).
+        """
         if move is None and state.execute_effect:
             if state.block_count:
                 return {"action": "execute_block"}
@@ -80,6 +84,10 @@ class GameMaster:
             else:
                 return {"action": "unknown_nonfunctional_action", "card": str(move)}
 
+        # gałąź teoretycznie nieosiągalna (52 kombinacje suit x value pokrywają
+        # obie listy), ale jawny fallback > implicit None
+        return {"action": "unknown_card", "card": str(move)}
+
 
 
     def process_turn(self, state: GameState) -> dict:
@@ -87,6 +95,7 @@ class GameMaster:
         # stan pomocniczy "szczęśliwej karty" jest ważny tylko w obrębie jednej tury
         state.lucky_drawn = False
         state.played_card = None
+        state.last_mover_index = state.current_player_index
 
         if state.current_player_index in state.blocked_turns_per_player:
             state.blocked_turns_per_player[state.current_player_index] -= 1

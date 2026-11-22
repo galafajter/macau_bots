@@ -11,7 +11,7 @@ class Player(ABC):
         self.name = name
         self.hand: List[Card] = []
         self.playable_hand: List[Card] = []
-        self.params: dict = None
+        self.params: dict | None = None
 
     def __str__(self):
         return f"{self.__class__.__name__}: {self.name}"
@@ -175,6 +175,9 @@ class BalancingPlayer(Player):
         self.suit_frequency = Counter()
 
     def make_move(self) -> Optional[Card]:
+        if not self.playable_hand:
+            return None
+
         self.suit_frequency.clear()
         self.suit_frequency.update(c.suit for c in self.playable_hand)
 

@@ -421,7 +421,7 @@ def test_normal_miss_without_effect_draws_single_card():
 
 
 def test_lucky_play_is_labelled_play_card_for_logger():
-    """GameState.eval_action (logowanie do SQLite) ma klasyfikować zagraną
+    """GameState.annotate_action (logowanie do SQLite) ma klasyfikować zagraną
     szczęśliwą kartę (dobór + zagranie w jednej turze) jako play_card,
     a nie "blocked" (ręka bez zmiany długości)."""
     gm = GameMaster()
@@ -437,7 +437,7 @@ def test_lucky_play_is_labelled_play_card_for_logger():
     hand_before = list(p2.hand)
 
     gm.process_turn(state)
-    state.eval_action(hand_before)
+    state.annotate_action(hand_before)
 
     assert state.action == "play_card"
     assert state.last_affected_cards == [card(Suit.SPADES, Value.THREE)]

@@ -34,6 +34,10 @@ class GameState:
     lucky_drawn: bool = False
     played_card: Card | None = None
 
+    # indeks gracza, który wykonał bieżący ruch (ustawia GameMaster.process_turn);
+    # annotate_action porównuje ręce TEGO gracza, a nie "bieżącego" po advance
+    last_mover_index: int | None = None
+
     def reset_active_effect(self):
         self.cards_to_draw = 0
         self.block_count = 0
@@ -53,31 +57,42 @@ class GameState:
     def current_player(self) -> Player:
         return self.players[self.current_player_index]
 
-    def eval_action(self, hand_before: list[Card]):
-            hand_after = self.current_player.hand
-            top_card_after = self.deck.top_stack_card
+    def annotate_action(self, hand_before: list[Card]):
+        """Oznacza akcję tury (etykiety zapisywane do SQLite).
 
-            self.last_affected_cards.clear()
+        Ręką po ruchu jest ręka gracza, który WYKONAŁ ruch (last_mover_index),
+        nie "bieżący" gracz -- process_turn zdążył już przejść dalej.
+        Uwaga: GameMaster.eval_action to INNA metoda (słownik akcji silnika).
+        """
+        if self.last_mover_index is not None:
+            mover = self.players[self.last_mover_index]
+        else:
+            mover = self.current_player
 
-            if len(hand_before) > len(hand_after):
-                self.action = "play_card"
-                self.last_affected_cards.append(top_card_after)
-                
-            elif len(hand_before) + 1 == len(hand_after):
-                self.action = "draw_card"
-                drawn_card = [c for c in hand_after if c not in hand_before][0]
-                self.last_affected_cards.append(drawn_card)
+        hand_after = mover.hand
+        top_card_after = self.deck.top_stack_card
 
-            elif len(hand_before) < len(hand_after):
-                self.action = "draw_more_cards"
-                drawn_cards = [c for c in hand_after if c not in hand_before]
-                self.last_affected_cards.extend(drawn_cards)
+        self.last_affected_cards.clear()
 
-            elif self.played_card is not None:
-                # "szczęśliwa karta": w tej turze nastąpił próbny dobór i zagranie
-                # tej samej karty (długość ręki bez zmian) -- to jest zagranie, nie blokada
-                self.action = "play_card"
-                self.last_affected_cards.append(self.played_card)
+        if len(hand_before) > len(hand_after):
+            self.action = "play_card"
+            self.last_affected_cards.append(top_card_after)
 
-            else:
-                self.action = "blocked"
+        elif len(hand_before) + 1 == len(hand_after):
+            self.action = "draw_card"
+            drawn_card = [c for c in hand_after if c not in hand_before][0]
+            self.last_affected_cards.append(drawn_card)
+
+        elif len(hand_before) < len(hand_after):
+            self.action = "draw_more_cards"
+            drawn_cards = [c for c in hand_after if c not in hand_before]
+            self.last_affected_cards.extend(drawn_cards)
+
+        elif self.played_card is not None:
+            # "szczęśliwa karta": w tej turze nastąpił próbny dobór i zagranie
+            # tej samej karty (długość ręki bez zmian) -- to jest zagranie, nie blokada
+            self.action = "play_card"
+            self.last_affected_cards.append(self.played_card)
+
+        else:
+            self.action = "blocked"

@@ -10,7 +10,7 @@ import random
 
 import pytest
 
-from core.makao_game import MacauGame
+from core.macau_game import MacauGame
 from core.player import RandomPlayer
 from tests.helpers import NullLogger
 

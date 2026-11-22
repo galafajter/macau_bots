@@ -75,7 +75,7 @@ class MacauGame:
             hand_before = list(self.game_state.current_player.hand)
 
             self.game_master.process_turn(self.game_state)
-            self.game_state.eval_action(hand_before)
+            self.game_state.annotate_action(hand_before)
 
             game_logger.in_game_log_after(self.game_state)
 
