@@ -151,8 +151,9 @@ class GameLogger:
                     )
                 )
         
-    def endgame_log(self, winner_pos: int, total_moves: int):
-        winner_db_id = self.players[winner_pos].id
+    def endgame_log(self, winner_pos: int | None, total_moves: int):
+        """Zamknięcie partii. winner_pos=None oznacza pat (brak zwycięzcy)."""
+        winner_db_id = self.players[winner_pos].id if winner_pos is not None else None
 
         self.db.insert_moves(self.moves_logs)
         self.db.insert_game_cards(self.cards_positions_logs)
