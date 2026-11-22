@@ -3,6 +3,7 @@ import time
 from itertools import cycle
 from typing import Optional
 import random
+from core import rules
 from core.game_state import GameState
 from core.game_master import GameMaster
 from logger.game_logger import GameLogger
@@ -53,10 +54,9 @@ class MacauGame:
 
         first_card: Card = deck.draw_from_deck()
 
-        # deal drawing_cards to the moment when passive card is on the table
-        while first_card.value in (Value.TWO, Value.THREE, Value.FOUR,
-                                   Value.JACK, Value.QUEEN, Value.KING,
-                                   Value.ACE):
+        # pierwsza karta na stosie musi być pasywna (bez efektu);
+        # pasywni Królowie Karo/Trefl mogą otworzyć rozdanie
+        while not rules.is_first_card_allowed(first_card):
             first_card = deck.draw_from_deck()
 
 
