@@ -1,47 +1,46 @@
-import pytest
-from core.player import Player
-from card import Card, Suit, Value
+"""Testy klasy bazowej Player (oraz pomocniczych Dummy z tests.helpers)."""
+
+from core.card import Suit, Value
+from tests.helpers import DummyPlayer, card
+
 
 def test_draw_card_adds_to_hand():
-    player = Player("test")
-    card = Card(Suit.HEART, Value.NINE, effect=None)
+    player = DummyPlayer("test")
+    nine = card(Suit.HEART, Value.NINE)
 
-    player.draw_card(card)
+    player.draw_card(nine)
 
     assert len(player.hand) == 1
-    assert card in player.hand
+    assert nine in player.hand
 
 
-def test_make_move_returns_none():
-    player = Player("test")
+def test_make_move_returns_none_when_no_playable_cards():
+    player = DummyPlayer("test")
+    player.hand = [card(Suit.HEART, Value.NINE)]
 
-    player.hand = [Card(Suit.HEART, Value.NINE, effect=None)]
+    player.evaluate_hand_for_playable_cards([])  # nic nielegalnego
 
-    player.evaluate_hand_for_playable_cards([])
-
-    player_move = player.make_move()
-
-    assert player_move is None
+    assert player.make_move() is None
 
 
-def test_make_move_returns_card():
-    player = Player("test")
-    card1 = Card(Suit.HEART, Value.NINE, effect=None)
-    card2 = Card(Suit.HEART, Value.EIGHT, effect=None)
-    card3 = Card(Suit.HEART, Value.TEN, effect=None)
-    card4 = Card(Suit.HEART, Value.JACK, effect=None)
-
+def test_make_move_returns_and_removes_played_card():
+    player = DummyPlayer("test")
+    card1 = card(Suit.HEART, Value.NINE)
+    card2 = card(Suit.HEART, Value.EIGHT)
 
     player.draw_card(card1)
     player.draw_card(card2)
-
-    playable_cards = [card1, card2, card3, card4]
-    player.evaluate_hand_for_playable_cards(playable_cards)
+    player.evaluate_hand_for_playable_cards([card1, card2])  # cała ręka legalna
 
     player_move = player.make_move()
 
-
-    assert isinstance(player_move, Card)
-    assert player_move in [card1, card2]
+    assert player_move == card1  # DummyPlayer gra pierwszą legalną
     assert player_move not in player.hand
+    assert card2 in player.hand
 
+
+def test_play_card_rejects_card_not_in_hand():
+    player = DummyPlayer("test")
+
+    assert player.play_card(card(Suit.CLUBS, Value.ACE)) is None
+    assert player.hand == []
