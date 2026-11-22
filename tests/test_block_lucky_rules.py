@@ -1,59 +1,21 @@
-"""
-Testy reguł z PR "block + lucky card":
+"""Testy reguł z PR "block + lucky card".
 
 A) Blokada 4: gracz, który nie odpowiedział (4/Dama), pauzuje dokładnie
    tyle własnych tur, ile czwórek zagrano w łańcuchu -- bez mnożnika
    (liczba graczy - 1) i bez dobierania kart.
-B) "Szczęśliwa karta": pierwsza dobrana karta przy active efekcie
+B) "Szczęśliwa karta": pierwsza dobrana karta przy aktywnym efekcie
    (wojna / żądanie wartości / żądanie koloru) jest próbą odpowiedzi;
    jeśli jest legalna, gracz może ją zagrać -- kara przechodzi dalej,
    a przy rezygnacji pobierana jest reszta kary.
 
-Testy są deterministyczne: talie budowane recznie (Deck dobiera z KONCA
-listy drawing_cards), gracze DummyPlayer zagrywaja pierwsza legalna karte.
+Testy są deterministyczne: talie budowane ręcznie (Deck dobiera z KOŃCA
+listy drawing_cards, patrz tests.helpers.make_deck).
 """
 
-from core.card import Card, Deck, Suit, Value
+from core.card import Suit, Value
 from core.game_master import GameMaster
 from core.game_state import GameState
-from core.player import Player
-
-
-class DummyPlayer(Player):
-    """Deterministyczny gracz: zagra pierwsza karte z playable_hand (albo None)."""
-
-    def make_move(self):
-        if not self.playable_hand:
-            return None
-        return self.play_card(self.playable_hand[0])
-
-
-class DecliningPlayer(DummyPlayer):
-    """Gracz, który zagra normalnie z reki, ale odrzuci szczesliwa karte
-    (drugie pytanie make_move w tej samej turze)."""
-
-    def __init__(self, name):
-        super().__init__(name)
-        self.decline_lucky = False
-
-    def make_move(self):
-        # pierwsze pytanie: playable_hand jest puste (brak obrony), flaga zostaje;
-        # drugie pytanie (po doborze probnym): playable_hand ma Karte -- tutaj rezygnujemy
-        if self.playable_hand and self.decline_lucky:
-            self.decline_lucky = False
-            return None
-        return super().make_move()
-
-
-def card(suit: Suit, value: Value) -> Card:
-    return Card(suit, value, effect=None)
-
-
-def make_deck(stack_cards, drawing_cards) -> Deck:
-    deck = Deck()
-    deck.stack_of_placed_cards = list(stack_cards)
-    deck.drawing_cards = list(drawing_cards)  # pop() z konca listy!
-    return deck
+from tests.helpers import DecliningPlayer, DummyPlayer, card, make_deck
 
 
 def three_players():
@@ -65,7 +27,7 @@ def three_players():
 def test_single_four_blocks_next_player_for_exactly_one_turn():
     gm = GameMaster()
     p1, p2, p3 = three_players()
-    # P1 wlasnie zagrał 4 pika (efekt blokady aktywny), teraz tura P2
+    # P1 właśnie zagrał 4 pika (efekt blokady aktywny), teraz tura P2
     state = GameState(
         deck=make_deck([card(Suit.SPADES, Value.FOUR)], [card(Suit.HEART, Value.EIGHT)]),
         players=[p1, p2, p3],
@@ -84,7 +46,7 @@ def test_single_four_blocks_next_player_for_exactly_one_turn():
     assert len(p2.hand) == 1  # blokada: bez dobierania kart
     assert state.current_player_index == 2
 
-    # pierwsza tura P2 po "pauzie" -- skip
+    # pierwsza tura P2 po pawzie -- skip
     state.current_player_index = 1
     action = gm.process_turn(state)
     assert action == {"action": "skipped_turn_because_of_block"}
@@ -92,7 +54,7 @@ def test_single_four_blocks_next_player_for_exactly_one_turn():
     assert len(p2.hand) == 1  # pauza bez doboru
     assert state.current_player_index == 2
 
-    # kolejna tura P2: juz zablokowany nie jest, gra normalnie (7 pika na 4 pika)
+    # kolejna tura P2: już zablokowany nie jest, gra normalnie (7 pika na 4 pika)
     state.current_player_index = 1
     action = gm.process_turn(state)
     assert action == {"action": "play_card", "card": "7 Spades"}
@@ -210,7 +172,7 @@ def test_war_lucky_card_transfers_penalty_to_next_player():
     # próbny dobór = 3 pika (KONIEC listy drawing_cards) -- karta wojenna, zagrana
     assert action == {"action": "war", "card": "3 Spades"}
     assert state.cards_to_draw == 5  # kara 2 + 3 przechodzi na następnego
-    assert len(p2.hand) == 1  # dobrał 1 i ją zagrał (mammlnie ta sama liczba)
+    assert len(p2.hand) == 1  # dobrał 1 i ją zagrał (ręka bez zmiany rozmiaru)
     assert state.deck.top_stack_card == card(Suit.SPADES, Value.THREE)
     assert state.current_player_index == 2
     assert state.effect_active is True  # wojna wciąż aktywna -- dla P3
@@ -256,7 +218,7 @@ def test_war_lucky_declined_draws_full_penalty():
     action = gm.process_turn(state)
 
     assert action == {"action": "execute_war"}
-    # odrzucona szczęśliwa (3 pika) zostaje w ręce + reszta kary (1 Karta: 9 karo)
+    # odrzucona szczęśliwa (3 pika) zostaje w ręce + reszta kary (1 karta: 9 karo)
     assert len(p2.hand) == 3
     assert card(Suit.SPADES, Value.THREE) in p2.hand
     assert card(Suit.DIAMOND, Value.NINE) in p2.hand
@@ -280,7 +242,7 @@ def test_war_without_lucky_draws_full_penalty():
     action = gm.process_turn(state)
 
     assert action == {"action": "execute_war"}
-    # próbna (8 kier, nie-wojenna) + reszta kary (1 Karta: 7 trefl) = komplet
+    # próbna (8 kier, nie-wojenna) + reszta kary (1 karta: 7 trefl) = komplet
     assert len(p2.hand) == 3
     assert card(Suit.HEART, Value.EIGHT) in p2.hand
     assert card(Suit.CLUBS, Value.SEVEN) in p2.hand
@@ -312,7 +274,7 @@ def test_war_trial_queen_negates_war():
 # ------------------------------------------ szczęśliwa karta: żądania (Walet/As)
 
 def test_value_demand_miss_draws_exactly_one_card():
-    """NOWOŚC: nieudana odpowiedź na żądanie wartości = 1 dobrana karta
+    """NOWOŚĆ: nieudana odpowiedź na żądanie wartości = 1 dobrana karta
     (wcześniej gracz nie dobierał nic)."""
     gm = GameMaster()
     p1, p2, p3 = three_players()
@@ -329,7 +291,7 @@ def test_value_demand_miss_draws_exactly_one_card():
     action = gm.process_turn(state)
 
     assert action == {"action": "draw_card_because_dont_have_value"}
-    assert len(p2.hand) == 2  # probna 9 karo nie jest piątką -> zostaje, koniec tury
+    assert len(p2.hand) == 2  # próbna 9 karo nie jest piątką -> zostaje, koniec tury
     assert state.demanded_value is Value.FIVE  # żądanie żyje dalej
     assert state.effect_active is True
     assert state.demand_turns_left == 3  # nieudana tura zużywa "życie" żądania
