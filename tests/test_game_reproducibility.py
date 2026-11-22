@@ -9,7 +9,7 @@ import random
 import pytest
 
 from core import rules
-from core.makao_game import MacauGame
+from core.macau_game import MacauGame
 from core.player import AggressivePlayer, CautiousPlayer, RandomPlayer
 from tests.helpers import DummyPlayer, NullLogger
 

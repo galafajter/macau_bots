@@ -2,7 +2,7 @@ from itertools import combinations
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 
-from core.makao_game import MacauGame
+from core.macau_game import MacauGame
 from logger.game_logger import GameLogger
 from database.database import MacauDatabase
 from core.player import (

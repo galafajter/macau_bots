@@ -32,7 +32,7 @@ core/
 ├── card.py           # Card, Deck
 ├── game_state.py     # stan partii (GameState)
 ├── game_master.py    # silnik: tury, efekty, szczęśliwa karta, blokady
-├── makao_game.py     # MacauGame: rozdanie, pętla partii, pat-guard
+├── macau_game.py     # MacauGame: rozdanie, pętla partii, pat-guard
 └── player.py         # interfejs Player + strategie (Random, Aggressive, Cautious, ...)
 simulations/         # masowe symulacje (multiprocessing -> SQLite)
 database/            # schemat i zapis partii (sqlite3)
@@ -56,8 +56,8 @@ pip install -r dev-requirements.txt     # dev: pytest, ruff, mypy
 # symulacje (wszystkie konfiguracje par botów, wiele procesów, zapis do SQLite)
 python -m simulations.simulation_without_replacement
 
-# pojedyncze partie z przykładowymi botami (własny runner: main w core/makao_game.py)
-python -m core.makao_game
+# pojedyncze partie z przykładowymi botami (własny runner: main w core/macau_game.py)
+python -m core.macau_game
 
 # testy (~2 s)
 pytest -q

@@ -1,8 +1,10 @@
 from core.game_state import GameState
 from core.card import Card
+from core.player import Player as PlayerBot
 import json
 from database.database import MacauDatabase
 from database.db_models import Game, Player, Strategy, Move, GameCard
+from typing import Optional
 
 
 class GameLogger:
@@ -13,6 +15,10 @@ class GameLogger:
         self.game = None
         self.players = []
         self.strategies = []
+        # referencja gracza wykonującego bieżący ruch (do zapisu "po ruchu";
+        # indeksowanie state.current_player_index - 1 zawodzi po odwróceniu
+        # kierunku gry Królem pik oraz przy owinięciu do zera)
+        self._moving_player: Optional[PlayerBot] = None
 
         self.moves_logs: list[Move] = []
         self.cards_positions_logs: list[GameCard] = []
@@ -93,7 +99,8 @@ class GameLogger:
 
     def in_game_log_before(self, state: GameState, move_num: int) -> Move:
         """Logging data while game runs before player move"""
-        
+        self._moving_player = state.current_player
+
         hand_before_str = json.dumps([f"{c.value.name}_{c.suit.name}" for c in state.current_player.hand])
         top_card_id = self._get_card_id(state.deck.top_stack_card)
 
@@ -110,8 +117,9 @@ class GameLogger:
         """Logging data while game runs after player move"""
         move_before = self.moves_logs[-1]
 
-        # state.current_player_index - 1 because after move is processed, current_player_index is already updated to the next player
-        hand_after_str = json.dumps([f"{c.value.name}_{c.suit.name}" for c in state.players[state.current_player_index - 1].hand])
+        # ręka PO ruchu należy do gracza, który robił ten ruch (zapamiętanego
+        # w in_game_log_before), a nie "bieżący indeks minus jeden"
+        hand_after_str = json.dumps([f"{c.value.name}_{c.suit.name}" for c in self._moving_player.hand])
         top_card_id = self._get_card_id(state.deck.top_stack_card)
 
         move_after = Move(
